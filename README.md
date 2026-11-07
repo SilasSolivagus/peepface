@@ -1,229 +1,212 @@
 # peepface
 
-**agent 状态的视觉词汇表。**
+**一张会表达状态的脸。26 种形状、任意颜色、22 个状态，一行 `sync()` 接上任何 agent。**
 
-12 KB · 零依赖 · 纯 SVG · Apache-2.0
+```js
+import { createFace } from 'peepface';
 
-[![npm](https://img.shields.io/npm/v/peepface?style=flat-square&color=222)](https://www.npmjs.com/package/peepface)
-[![Stars](https://img.shields.io/github/stars/SilasSolivagus/peepface?style=flat-square&color=222)](https://github.com/SilasSolivagus/peepface/stargazers)
-[![License](https://img.shields.io/github/license/SilasSolivagus/peepface?style=flat-square&color=222)](./LICENSE)
-[![Last commit](https://img.shields.io/github/last-commit/SilasSolivagus/peepface?style=flat-square&color=222)](https://github.com/SilasSolivagus/peepface/commits/main)
+const face = createFace('#face', { shape: 'sphere', color: '#FF6700' });
 
-**[看 demo →](https://silassolivagus.github.io/peepface/)**　（十二张脸同时在动，鼠标移上去它们会看你）
-
-![peepface demo](assets/demo.gif)
+face.sync({ running: true, composing: false, activity: { tool: 'read_file' } });
+// → 脸变成「在读文件」
+```
 
 ---
 
-## 为什么
-
-现在做 agent 的人，状态只有三种表达：
-
-```
-转圈          三个点        一行小字
-◜            ...          正在思考…
-```
-
-这三种**都分不清「在干活」和「卡死了」**。用户看着转圈转了三十秒，不知道应该继续等，还是去点一下试试。
-
-peepface 的做法是给 agent 一张脸，让状态变成**形状上的差别**，而不是文字上的：
-
-| 状态 | 一眼看到的是 |
-|---|---|
-| `working` | 眼睛眯成一条横缝 |
-| `blocked` | 身体拉长、眼歪着 —— 过不去 |
-| `failed` | 圆脸、眼睛下垂 —— 塌了 |
-| `finished` | 弯月笑眼、身体撑开一下 |
-
-不看标签也能分出「在做事」和「出问题了」。这就是全部。
+![小橙](stickers/cover-750.png)
 
 ---
 
-## 快速开始
+## 为什么是「状态」而不是「动画」
 
-**浏览器**（3 行）：
+大多数 AI 头像是一个循环 GIF —— 它不知道自己在干什么。
 
-```html
-<script src="https://silassolivagus.github.io/peepface/dist/peepface.js"></script>
-<div id="face"></div>
-<script>
-  peepface.createFace(document.getElementById('face'), { state: 'working' });
-</script>
-```
+peepface 的每个状态**对应 agent 的一个真实阶段**：思考、检索、调工具、卡住、完成。
 
-**ESM**：
+**你扫一眼就知道它在干什么，不用读那行"正在搜索…"的小字。**
+
+---
+
+## 三十秒上手
 
 ```bash
 npm i peepface
 ```
 
-```js
+```html
+<div id="face" style="width:160px;height:160px"></div>
+<script type="module">
 import { createFace } from 'peepface';
 
-const face = createFace(document.querySelector('#face'), { state: 'idle' });
-face.setState('thinking');   // 就这一句
+const face = createFace('#face', { size: 160 });
+
+face.state('thinking');    // 直接指定
+face.bind(bus);            // 或者接事件总线
+</script>
 ```
 
-它会自己眨眼、呼吸、跟着鼠标看。你只负责告诉它「现在在干什么」。
+浏览器直接开也可以：`custom-standalone.html` 双击，不需要服务器。
 
 ---
 
-## 十二个生命周期状态
-
-| 状态 | 什么时候用 | 视觉上靠什么区分 |
-|---|---|---|
-| `idle` | 没事干，但醒着 | 正圆 + 竖眼 + 缓慢漂移 |
-| `listening` | 用户在打字，我在等 | 眼位前倾 |
-| `thinking` | 收到请求，还没开口 | 形体变不规则 + 轨道环 |
-| `searching` | 在翻找（检索、读文件） | 眼左右扫视 3.6 Hz |
-| `streaming` | 正在往外吐字 | 竖眼 + 呼吸加快 |
-| `working` | 在做事，用户不用管 | **眼睛眯成横缝** |
-| `waiting` | 等你决定（审批、选择） | 侧看 + 半透明环 |
-| `blocked` | 过不去，需要人拉一把 | **身体拉长 + 眼歪 30°** |
-| `finished` | 干完了 | 弯月笑眼 + 身体变宽 |
-| `failed` | 出错了 | **圆脸 + 眼睛下垂** |
-| `sleeping` | 很久没人用 | 眼睛闭成一条线 |
-| `waking` | 被叫醒了 | 眼睛猛地放大 |
-
-完整定义在 **[`states.json`](./states.json)**，包括每个状态的 `differs_from`（和谁不像）和 `must_not`（做了什么就毁了）。
-
----
-
-## 核心不是代码，是这两个字段
-
-```json
-"working": {
-  "differs_from": {
-    "blocked": "不歪、不变形、不冒符号",
-    "thinking": "形状是圆，不是 blob"
-  },
-  "must_not": "加任何「卡住」的视觉信号。那会让人以为出问题了。"
-}
-```
-
-代码可以从零再写一遍，但这些判断是调出来的：
-
-- `finished` **停留超过 2 秒就变成常态，失去信号价值**
-- `sleeping` **在 5 分钟内出现，就不是「睡了」，是「累了」**
-- `working` **加任何「卡住」的暗示，用户会以为出问题**
-
-这也是为什么它是「词汇表」而不是「一个库」——**形态可以换，语义必须一致**。
-
----
-
-## 保留你自己的词汇
-
-现实里没人把状态叫 `working`。你叫 `tool_call`、叫 `executing`、叫 `retrieving`。
-
-`states.json` 里有 `aliases`：
-
-```json
-{ "coding": "working", "retrieving": "searching", "done": "finished" }
-```
-
-**你保留自己的词，视觉上大家统一。** 不逼人改代码，是它能当规范的前提。
-
----
-
-## API
+## 状态：22 个
 
 ```js
-const face = peepface.createFace(container, {
-  state: 'idle',     // 初始状态
-  size: 84,          // 像素
-  dark: true,        // 深色主题：白脸黑眼
-  follow: true,      // 眼睛跟随鼠标
+idle  listening  thinking  searching  streaming  working
+waiting  blocked  finished  failed  sleeping  waking  spawning
+reading  coding  running  computing  controlling
+orbit  progress  sending  writing
+```
+
+前 13 个是**通用 agent 状态**，后面是**工具族细分**。
+
+```js
+face.state('working');
+```
+
+**别名**（`tool_call` → `working`、`error` → `failed`…）会自动转换，表在 `index.js` 的 `DEFAULT_ALIASES`。
+
+---
+
+## 协议：`sync(facts)`
+
+不是事件流，是**事实投影**：
+
+```js
+face.sync({
+  running: true,                 // agent 在跑
+  composing: false,              // 正在输出文字
+  activity: { tool: 'read_file' },  // 在干什么
+  awaiting: null,                // 在等人
+  settlement: null,              // 上一轮怎么结束的
+});
+```
+
+**幂等** —— 重发一百遍结果一样，丢一条推送下一帧自己修正。
+
+求值只有三段：
+
+```js
+if (facts.awaiting)       return 'blocked';
+if (running || composing) return composing ? 'streaming' : verbToState(activity);
+if (settlement 在 8 秒内)  return success ? 'finished' : 'failed';
+return 'idle';
+```
+
+完整说明：[PROTOCOL.md](PROTOCOL.md)
+
+---
+
+## 外观：26 种形状 + 任意颜色
+
+```js
+createFace('#face', {
+  shape: 'cloud',        // 26 种里选一个
+  color: '#1084FE',      // 11 色板 id、任意 hex、或三位简写
+  spot:  '#FFFFFF',      // 眼睛颜色（不给就是洞，露出背景）
+});
+```
+
+```
+sphere cloud square sparkle clover heartChubby starFlower teardrop
+tablet wedge house star6 pebble bean egg squircle capsule cylinder
+hex gem crystal shield dome arch leaf pumpkin
+```
+
+**不传形状和颜色？** 按 `id` 的 hash 自动派生 —— 同一个 agent 永远同一张脸，不用存任何东西。
+
+```js
+createFace('#face', { id: 'agent-42' });   // 稳定且唯一
+```
+
+---
+
+## 自定义形状
+
+```js
+import { defineShape } from 'peepface';
+
+defineShape('myArch', {
+  path: 'M 20 190 L 20 80 C 20 40 55 10 100 10 C 145 10 180 40 180 80 L 180 190 Z',
 });
 
-face.setState('working');
-face.getState();     // 'working'
-face.blink();        // 手动眨一次
-face.destroy();      // 卸载，移除全部监听
+createFace('#face', { shape: 'myArch' });
 ```
 
-一页可以同时跑多个实例（demo 页就是 12 个）。类型定义在 [`peepface.d.ts`](./peepface.d.ts)。
+**能力边界**（实测）：
+
+| 能做 | 做不了 |
+|---|---|
+| 凸形状（圆、方、蛋、胶囊…） | 深凹陷（猫耳、兔耳、星角） |
+| 浅凹（心形那种） | 内部线条（斑纹、胡须） |
+| 眼睛自动避让 | 第三层图案 |
+
+深凹需要引擎的 3D 环结构，2D path 转换走的是凸包路径。
 
 ---
 
-## 视觉上唯一需要知道的一件事
+## 换装间
 
-**眼睛是「洞」**——从脸的形状里挖出来，露出的是背景色。
+`studio.html` —— 换形状、换颜色、试穿 22 个状态、导出 PNG/SVG。
 
-所以背景换什么颜色、什么主题，眼睛都自动是对的：
-
-```js
-深色主题 → 白脸 + 黑眼（洞露出深背景）
-浅色主题 → 黑脸 + 白眼（洞露出浅背景）
-```
-
-脸用页面的文字色，洞用页面的背景色。零配置就跟随了。
+`custom-standalone.html` —— 双击打开的单文件版，不需要服务器。
 
 ---
 
-## 目录
-
-```
-├── core.js            唯一引擎（328 行，工厂版可多实例）
-├── states.json        词汇表
-├── peepface.d.ts      类型定义
-├── build.mjs          core.js → dist/
-├── dist/
-│   ├── peepface.js    浏览器（UMD）
-│   ├── peepface.mjs   ESM
-│   └── dsh-client.js  DeepSeek Harness 插件
-├── adapters/dsh.js    适配层：状态判定 + 拖拽
-├── plugin-dsh/        DSH 插件包
-└── index.html         demo
-```
+## DSH 插件
 
 ```bash
-node build.mjs      # 改完 core.js 后重新生成 dist/
+# ~/.dsh/profiles/desktop/package.json
+"dsh-plugin-peepface": "link:/path/to/peepface/plugin-dsh"
 ```
 
-**只改 `core.js`，不要手改 `dist/`。**
+装上后右下角有一张脸，**点头像可以换形状和颜色**。状态由 DOM 观察驱动，不拦截请求。
 
 ---
 
-## 导出成图片
+## 关于这个项目
 
-```bash
-node export.mjs --state working --size 640 --out avatar.png
-node export.mjs --all --size 240 --out png/            # 12 张 PNG
-node export.mjs --all --size 240 --gif --out gif/       # 12 个 GIF（各 1.6s）
+### 引擎的来源
+
+`engine.mjs` 是从 **Grok Bot**（xAI 的桌面客户端）的 bundle 中**原样移植**的动画引擎，未做裁剪和修改。
+
+它负责：球面眼睛投影、贝塞尔缓动、弹簧物理、28 段关键帧动画、26 种形状的几何、13 种装饰渲染器。
+
+**这不是我们写的。** 我们做的是把它从 bundle 里拆出来，让它能独立运行。
+
+### 我们写的部分
+
+```
+index.js     接口层：createFace / sync / defineShape / 形状与颜色的解析与派生
+adapters/    DSH 适配器：DOM 观察 → facts
+PROTOCOL.md  状态协议
+build*.mjs   打包脚本
 ```
 
-可选参数：`--bg '#0b0b0d'`（背景色，不传则透明）、`--dark 1|0`（深/浅主题）。
+**价值的全部在这里**：把一套闭源的动画能力，变成一个任何人能接上的接口。
 
-需要本机有 Chrome。用于做头像、表情包、文档配图，或者给设计稿出素材。
+### 法律状态
+
+**这个项目不适合商业分发。**
+
+引擎代码的版权属于原厂，Apache-2.0 只覆盖我们写的接口层。仓库公开是为了学习和研究，不是为了提供可直接商用的组件。
+
+如果你要做一个类似的东西，正确做法是**读 [PROTOCOL.md](PROTOCOL.md) 里的接口设计，然后自己实现引擎**。
 
 ---
 
-## 接入新宿主
+## 文档
 
-`adapters/dsh.js` 是一个完整例子：怎么把一个「能画的脸」变成一个「会跟着 agent 状态变的脸」。
-
-核心只有一件事：**把宿主的事件翻译成 `face.setState()`**。
-
-```js
-// 事件 → 状态，这张表才是每个宿主真正要写的东西
-on('tool_start',  () => face.setState('working'));
-on('token',       () => face.setState('streaming'));
-on('error',       () => face.setState('failed'));
-on('done',        () => face.setState('finished'));
-```
-
-欢迎提 PR 加适配器。
-
----
-
-## 致谢
-
-球面眼睛的几何、眨眼的分段曲线、状态语义的分层，来自对 [Grok Bot](https://x.ai/news/designing-grok-bot) 头像系统的观察与研究。
-
-本项目**不含任何原厂素材**（形状路径、关键帧、配色）。全部代码与参数基于可观察行为重建。
+| 文件 | 内容 |
+|---|---|
+| [PROTOCOL.md](PROTOCOL.md) | 状态协议：facts 结构、求值顺序、工具映射 |
+| [IDEA-desktop.md](IDEA-desktop.md) | 设想：做成桌面应用 |
+| `studio.html` | 换装间 |
 
 ---
 
 ## License
 
-[Apache-2.0](./LICENSE)
+Apache-2.0（**仅覆盖 `index.js`、`adapters/`、构建脚本与文档**）
+
+引擎部分见上文「法律状态」。

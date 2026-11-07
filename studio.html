@@ -1,0 +1,280 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>peepface · 换装间</title>
+<style>
+  :root{
+    --bg:#0b0b0d; --panel:#121216; --line:#1f1f25; --fg:#ececef;
+    --dim:#71717a; --accent:#ff6700;
+  }
+  *{box-sizing:border-box}
+  body{
+    margin:0;background:var(--bg);color:var(--fg);min-height:100vh;
+    font:14px/1.6 -apple-system,"PingFang SC",system-ui,sans-serif;
+  }
+  header{padding:28px 32px 0}
+  h1{font-size:20px;font-weight:560;letter-spacing:-.02em;margin:0 0 4px}
+  .sub{color:var(--dim);font-size:13px;margin:0}
+  main{
+    display:grid;grid-template-columns:340px 1fr;gap:24px;
+    padding:24px 32px 48px;align-items:start;
+  }
+  @media(max-width:900px){main{grid-template-columns:1fr}}
+
+  /* ---- 左：舞台 ---- */
+  .stage{
+    background:var(--panel);border:1px solid var(--line);border-radius:18px;
+    padding:24px;display:flex;flex-direction:column;align-items:center;gap:16px;
+    position:sticky;top:24px;
+  }
+  #hero{width:220px;height:220px}
+  .stage-name{font-size:13px;color:var(--dim);min-height:20px;text-align:center}
+  .stage-name b{color:var(--fg);font-weight:560}
+
+  /* ---- 右：控制面板 ---- */
+  .panel{display:flex;flex-direction:column;gap:20px}
+  .card{background:var(--panel);border:1px solid var(--line);border-radius:16px;padding:18px 20px}
+  .card h2{font-size:12px;font-weight:600;letter-spacing:.08em;text-transform:uppercase;
+           color:var(--dim);margin:0 0 14px}
+
+  /* 形状网格 */
+  .shapes{display:grid;grid-template-columns:repeat(auto-fill,minmax(72px,1fr));gap:8px}
+  .shape{
+    aspect-ratio:1;border-radius:12px;border:1px solid transparent;cursor:pointer;
+    background:#0e0e12;display:flex;align-items:center;justify-content:center;
+    padding:6px;transition:border-color .15s,background .15s;
+  }
+  .shape:hover{background:#16161c}
+  .shape.on{border-color:var(--accent)}
+  .shape>div{width:100%;height:100%}
+
+  /* 颜色 */
+  .colors{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+  .sw{width:30px;height:30px;border-radius:9px;cursor:pointer;border:2px solid transparent;
+      transition:border-color .15s}
+  .sw.on{border-color:var(--fg)}
+  .custom{display:flex;align-items:center;gap:8px;margin-top:12px}
+  input[type=color]{width:38px;height:30px;border:none;background:none;cursor:pointer;padding:0}
+  input[type=text]{
+    flex:1;background:#0e0e12;border:1px solid var(--line);border-radius:8px;
+    color:var(--fg);font:inherit;font-size:12px;padding:6px 10px;
+  }
+
+  /* 状态 */
+  .states{display:grid;grid-template-columns:repeat(auto-fill,minmax(104px,1fr));gap:6px}
+  .st{
+    font:inherit;font-size:12px;padding:7px 10px;border-radius:9px;cursor:pointer;
+    border:1px solid var(--line);background:#0e0e12;color:var(--fg);text-align:left;
+    transition:background .15s;
+  }
+  .st:hover{background:#181820}
+  .st.on{background:var(--accent);border-color:var(--accent);color:#000}
+  .st small{display:block;font-size:10px;opacity:.55;margin-top:1px}
+
+  /* 导出 */
+  .row{display:flex;gap:8px;flex-wrap:wrap}
+  button.act{
+    font:inherit;font-size:12px;padding:8px 14px;border-radius:9px;cursor:pointer;
+    border:1px solid var(--line);background:#1a1a21;color:var(--fg);
+  }
+  button.act:hover{background:#23232c}
+  button.act.primary{background:var(--fg);color:#0b0b0d;border-color:var(--fg)}
+  code{font-size:11px;color:var(--dim)}
+</style>
+</head>
+<body>
+<header>
+  <h1>换装间</h1>
+  <p class="sub">换形状、换颜色、试穿每一个状态</p>
+</header>
+
+<main>
+  <div class="stage">
+    <div id="hero"></div>
+    <div class="stage-name" id="stageName">点一个状态试试</div>
+    <div class="row">
+      <button class="act" id="blink">眨一下</button>
+      <button class="act" id="poke">戳一下</button>
+    </div>
+  </div>
+
+  <div class="panel">
+    <section class="card">
+      <h2>形状 · 26</h2>
+      <div class="shapes" id="shapes"></div>
+    </section>
+
+    <section class="card">
+      <h2>颜色</h2>
+      <div class="colors" id="colors"></div>
+      <div class="custom">
+        <input type="color" id="picker" value="#E8E8E8">
+        <input type="text" id="hex" placeholder="#RRGGBB 或色板 id，如 blue">
+      </div>
+    </section>
+
+    <section class="card">
+      <h2>状态 · 22</h2>
+      <div class="states" id="states"></div>
+    </section>
+
+    <section class="card">
+      <h2>导出</h2>
+      <div class="row">
+        <button class="act primary" id="dlPng">下载 PNG</button>
+        <button class="act" id="dlSvg">下载 SVG</button>
+        <button class="act" id="reset">重置</button>
+      </div>
+      <p style="margin:12px 0 0"><code id="code"></code></p>
+    </section>
+  </div>
+</main>
+
+<script type="module">
+import {
+  createFace, SHAPES, PALETTE, STATE_ALL, STATE_HELP, resolveColor,
+} from './index.js';
+
+const hero = createFace('#hero', { shape: 'sphere', state: 'idle', size: 220, color: '#E8E8E8' });
+
+let currentShape = 'sphere';
+let currentColor = '#E8E8E8';
+let currentState = 'idle';
+
+/* ---------- 形状网格（静态缩略，不跑 rAF）---------- */
+const shapesBox = document.getElementById('shapes');
+const thumbs = new Map();
+
+for (const s of SHAPES) {
+  const cell = document.createElement('div');
+  cell.className = 'shape' + (s === currentShape ? ' on' : '');
+  cell.dataset.shape = s;
+  const inner = document.createElement('div');
+  cell.appendChild(inner);
+  shapesBox.appendChild(cell);
+
+  // 静态定格，省性能
+  try {
+    createFace(inner, { shape: s, size: 68, color: currentColor, state: 'idle', static: true });
+  } catch (e) {
+    inner.textContent = '?';
+  }
+
+  cell.onclick = () => {
+    currentShape = s;
+    hero.shape(s);
+    document.querySelectorAll('.shape').forEach(n => n.classList.toggle('on', n.dataset.shape === s));
+    updateCode();
+  };
+}
+
+/* ---------- 颜色 ---------- */
+const colorsBox = document.getElementById('colors');
+for (const c of PALETTE) {
+  const sw = document.createElement('div');
+  sw.className = 'sw';
+  sw.style.background = c.value === '#000000' ? '#111' : c.value;
+  sw.title = `${c.label} ${c.value}`;
+  sw.onclick = () => setColor(c.value);
+  colorsBox.appendChild(sw);
+}
+
+const picker = document.getElementById('picker');
+const hexInput = document.getElementById('hex');
+picker.oninput = () => setColor(picker.value);
+hexInput.onchange = () => setColor(hexInput.value.trim());
+
+function setColor(v) {
+  currentColor = resolveColor(v, currentColor);
+  hero.color(currentColor);
+  picker.value = currentColor.length === 7 ? currentColor : '#E8E8E8';
+  hexInput.value = currentColor;
+  // 更新缩略图颜色
+  document.querySelectorAll('.shape').forEach(cell => {
+    const inner = cell.firstChild;
+    inner.replaceChildren();
+    try {
+      createFace(inner, {
+        shape: cell.dataset.shape, size: 68,
+        color: currentColor, state: 'idle', static: true,
+      });
+    } catch {}
+  });
+  updateCode();
+}
+
+/* ---------- 状态 ---------- */
+const statesBox = document.getElementById('states');
+for (const s of STATE_ALL) {
+  const b = document.createElement('button');
+  b.className = 'st' + (s === currentState ? ' on' : '');
+  b.dataset.state = s;
+  b.innerHTML = `${s}<small>${STATE_HELP[s] || ''}</small>`;
+  b.onclick = () => {
+    currentState = s;
+    hero.state(s);
+    document.querySelectorAll('.st').forEach(n => n.classList.toggle('on', n.dataset.state === s));
+    document.getElementById('stageName').innerHTML = `<b>${s}</b> · ${STATE_HELP[s] || ''}`;
+    updateCode();
+  };
+  statesBox.appendChild(b);
+}
+
+/* ---------- 动作 ---------- */
+document.getElementById('blink').onclick = () => hero.blink();
+document.getElementById('poke').onclick = () => hero.poke('bounce');
+
+/* ---------- 导出 ---------- */
+function svgText() {
+  return document.querySelector('#hero svg')?.outerHTML || '';
+}
+
+document.getElementById('dlSvg').onclick = () => {
+  const blob = new Blob([svgText()], { type: 'image/svg+xml' });
+  download(URL.createObjectURL(blob), `peepface-${currentShape}-${currentState}.svg`);
+};
+
+document.getElementById('dlPng').onclick = () => {
+  const svg = svgText();
+  const img = new Image();
+  const url = 'data:image/svg+xml;base64,' + btoa(unescape(encodeURIComponent(svg)));
+  img.onload = () => {
+    const c = document.createElement('canvas');
+    c.width = c.height = 512;
+    const ctx = c.getContext('2d');
+    ctx.drawImage(img, 0, 0, 512, 512);
+    c.toBlob(b => download(URL.createObjectURL(b), `peepface-${currentShape}-${currentState}.png`));
+  };
+  img.src = url;
+};
+
+function download(url, name) {
+  const a = document.createElement('a');
+  a.href = url; a.download = name; a.click();
+  setTimeout(() => URL.revokeObjectURL(url), 3000);
+}
+
+/* ---------- 重置 ---------- */
+document.getElementById('reset').onclick = () => {
+  currentShape = 'sphere';
+  currentState = 'idle';
+  hero.shape('sphere');
+  hero.state('idle');
+  setColor('#E8E8E8');
+  document.querySelectorAll('.shape').forEach(n => n.classList.toggle('on', n.dataset.shape === 'sphere'));
+  document.querySelectorAll('.st').forEach(n => n.classList.toggle('on', n.dataset.state === 'idle'));
+  updateCode();
+};
+
+/* ---------- 代码预览 ---------- */
+function updateCode() {
+  document.getElementById('code').textContent =
+    `createFace(el, { shape: '${currentShape}', color: '${currentColor}', state: '${currentState}' })`;
+}
+updateCode();
+window.__studio = { hero };
+</script>
+</body>
+</html>

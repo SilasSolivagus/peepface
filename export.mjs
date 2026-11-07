@@ -1,134 +1,158 @@
 #!/usr/bin/env node
-/* peepface export — 把状态导出成图片
+/* peepface v2 表情导出器
  *
- *   node export.mjs --state working --size 640 --out working.png
- *   node export.mjs --all --size 240 --out pack/              # 12 张 PNG
- *   node export.mjs --all --size 240 --gif --out pack/         # 12 个 GIF（每个 1.6s）
+ *   node export-v2.mjs --state working --text "在做了" --ink '#FF6700' --spot '#2B1B12'
+ *   node export-v2.mjs --all --out stickers
  *
- * 需要本机装有 Chrome，以及 playwright-core。
+ * 产物：240×240 的 GIF（16 帧 / 1.6s）与 PNG
  */
-import { spawn } from 'node:child_process';
-import { mkdirSync, existsSync } from 'node:fs';
-import { dirname, join, resolve } from 'node:path';
+import pw from '/Users/silas/.dsh/profiles/desktop/node_modules/playwright-core/index.js';
+const { chromium } = pw;
+import { mkdirSync, writeFileSync, rmSync, existsSync } from 'node:fs';
+import { join, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { createRequire } from 'node:module';
+import { execFileSync } from 'node:child_process';
 
 const here = dirname(fileURLToPath(import.meta.url));
 
 /* ---------- 参数 ---------- */
-const argv = process.argv.slice(2);
-const arg = (k, d) => {
-  const i = argv.indexOf('--' + k);
-  return i >= 0 ? (argv[i + 1] && !argv[i + 1].startsWith('--') ? argv[i + 1] : true) : d;
+function arg(name, def = null) {
+  const i = process.argv.indexOf('--' + name);
+  if (i < 0) return def;
+  const v = process.argv[i + 1];
+  return v && !v.startsWith('--') ? v : true;
+}
+const flag = n => process.argv.includes('--' + n);
+
+const STATE = arg('state', 'idle');
+const ALL = flag('all');
+const OUT = arg('out', join(here, 'stickers-v2'));
+const SIZE = Number(arg('size', 240));
+const INK = arg('ink', '#FF6700');
+const SPOT = arg('spot', '#2B1B12');
+const BG = arg('bg', '#ffffff');
+const TEXT = arg('text', '');
+const SHAPE = arg('shape', 'sphere');
+const FRAMES = Number(arg('frames', 16));
+const DELAY = Number(arg('delay', 100));   // ms/帧
+
+/* 表情包配置：状态 → 文案 */
+const PACK = {
+  idle: '在的',
+  listening: '你说',
+  thinking: '想想',        // 三个点，省略号
+  curious: '好奇',         // inspecting 表情：两只眼不一样大
+  streaming: '来了来了',
+  working: '在做了在做了',
+  blocked: '卡住了',
+  finished: '搞定',
+  failed: '寄了',
+  surprised: '惊了',
+  sleeping: '已下班',
+  waking: '醒了醒了',
 };
-const flag = k => argv.includes('--' + k);
 
-const STATES = ['idle', 'listening', 'thinking', 'searching', 'streaming', 'working',
-                'waiting', 'blocked', 'finished', 'failed', 'sleeping', 'waking'];
-
-const all = flag('all');
-const state = arg('state', 'idle');
-const size = flag('sticker') ? 240 : Number(arg('size', 640));
-const out = resolve(arg('out', 'face.png'));
-const gif = flag('gif');
-const bg = arg('bg', null);
-const dark = arg('dark', null);
-const text = arg('text', '');
-const sticker = flag('sticker');
-const color = arg('color', null);   // 240×240 + 底部文案
-
-if (!all && !argv.includes('--state')) {
-  console.error('用法：node export.mjs --state <状态> --size 640 --out face.png');
-  console.error('      node export.mjs --all --size 240 --out pack/');
-  process.exit(1);
+/* ---------- 页面 ---------- */
+const PAGE = `<!DOCTYPE html><html><head><meta charset="utf-8"><style>
+  html,body{margin:0;background:transparent;}
+  #stage{display:flex;flex-direction:column;align-items:center;justify-content:center;}
+  #t{font-family:"PingFang SC","Hiragino Sans GB",-apple-system,sans-serif;
+     font-weight:600;letter-spacing:.02em;line-height:1;white-space:nowrap;}
+</style></head><body>
+<div id="stage"><div id="f"></div><div id="t"></div></div>
+<script type="module">
+import { createFace } from './index.js';
+const q = new URLSearchParams(location.search);
+const size = Number(q.get('size') || 240);
+const text = q.get('text') || '';
+const stage = document.getElementById('stage');
+const pad = text ? Math.round(size * 0.34) : 0;
+const faceSize = size - pad;
+stage.style.width = size + 'px';
+stage.style.height = size + 'px';
+if (q.get('bg')) { stage.style.background = q.get('bg'); document.body.style.display='grid'; document.body.style.placeItems='center'; document.body.style.minHeight='100vh'; }
+document.getElementById('f').style.cssText = 'width:'+faceSize+'px;height:'+faceSize+'px';
+if (text) {
+  const t = document.getElementById('t');
+  t.textContent = text;
+  t.style.fontSize = '26px';
+  t.style.marginTop = Math.round(size*0.035)+'px';
+  t.style.color = q.get('dark') === '1' ? '#f2f2f3' : '#101014';
 }
+window.__face = createFace('#f', {
+  shape: q.get('shape') || 'sphere',
+  size: faceSize,
+  color: q.get('ink') || '#FF6700',
+  spot: q.get('spot') || '#2B1B12',
+  state: q.get('state') || 'idle',
+});
+window.__ready = true;
+</script></body></html>`;
 
-/* ---------- 静态服务（只用它把页面和 dist 喂给 Chrome） ---------- */
+writeFileSync(join(here, '_export.html'), PAGE);
+
+/* ---------- 启动本地服务 ---------- */
 const PORT = 8800 + Math.floor(Math.random() * 500);
-const server = spawn('python3', ['-m', 'http.server', String(PORT), '--bind', '127.0.0.1'], {
-  cwd: here, stdio: 'ignore', detached: false,
-});
-await new Promise(r => setTimeout(r, 900));
+const server = execFileSync('bash', ['-c', `cd "${here}" && (python3 -m http.server ${PORT} --bind 127.0.0.1 >/dev/null 2>&1 &) ; sleep 1; echo ok`]).toString();
 
-/* ---------- playwright ---------- */
-const require = createRequire(import.meta.url);
-let chromium;
-for (const p of [
-  'playwright-core',
-  '/Users/silas/.dsh/profiles/desktop/node_modules/playwright-core',
-]) {
-  try { ({ chromium } = require(p)); break; } catch (e) { /* 下一个 */ }
-}
-if (!chromium) {
-  console.error('找不到 playwright-core。装一个：npm i -D playwright-core');
-  server.kill(); process.exit(1);
-}
-
-const CHROME = process.env.CHROME_PATH
-  || '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome';
-
+/* ---------- 主流程 ---------- */
 const browser = await chromium.launch({
-  executablePath: existsSync(CHROME) ? CHROME : undefined,
-  args: ['--disable-background-timer-throttling', '--disable-renderer-backgrounding'],
+  executablePath: '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome',
 });
 
-const list = all ? STATES : [state];
-mkdirSync(gif || all ? out : dirname(out), { recursive: true });
-
-for (const st of list) {
-  const q = new URLSearchParams({ state: st, size: String(size) });
-  if (bg) q.set('bg', bg);
-  if (dark !== null) q.set('dark', dark === '1' || dark === true ? '1' : '0');
-  if (text) q.set('text', text);
-  if (color) q.set('color', color);
-  if (sticker) q.set('textSize', '26');
-
+async function shoot(state, text, outDir) {
   const page = await browser.newPage({
-    viewport: { width: size + 40, height: size + 40 },
+    viewport: { width: SIZE, height: SIZE },
     deviceScaleFactor: 1,
   });
-  await page.goto(`http://127.0.0.1:${PORT}/export.html?${q}`, { waitUntil: 'load' });
-  await page.waitForFunction('window.__ready === true');
-  await page.waitForTimeout(260);          // 让呼吸/眨眼落到一个稳定相位
 
-  const el = await page.$('#stage');
+  const q = new URLSearchParams({
+    state, size: String(SIZE), text: text || '',
+    ink: INK, spot: SPOT, bg: BG, shape: SHAPE,
+  });
+  await page.goto(`http://127.0.0.1:${PORT}/_export.html?${q}`, { waitUntil: 'networkidle' });
+  await page.waitForFunction(() => window.__ready === true, { timeout: 10000 });
+  await page.waitForTimeout(Number(arg('settle', 2500)));   // 等 clip 进入稳定姿态
 
-  if (gif) {
-    /* GIF：真实时间采样 1.6 秒，10fps */
-    const dir = join(out, '.frames-' + st);
-    mkdirSync(dir, { recursive: true });
-    const FPS = 10, N = 16;
-    const t0 = Date.now();
-    for (let i = 0; i < N; i++) {
-      const wait = t0 + i * (1000 / FPS) - Date.now();
-      if (wait > 0) await page.waitForTimeout(wait);
-      await el.screenshot({ path: join(dir, `f_${String(i).padStart(3, '0')}.png`), omitBackground: !bg });
+  const box = await page.$('#stage');
+
+  if (flag('gif')) {
+    const tmp = join('/tmp', `pf-shots-${state}-${Date.now()}`);
+    mkdirSync(tmp, { recursive: true });
+    for (let i = 0; i < FRAMES; i++) {
+      await box.screenshot({ path: join(tmp, `f_${String(i).padStart(4, '0')}.png`) });
+      await page.waitForTimeout(DELAY);
     }
-    await page.close();
-
-    const target = join(out, st + '.gif');
-    await run('ffmpeg', [
-      '-y', '-framerate', String(FPS), '-i', join(dir, 'f_%03d.png'),
-      '-vf', 'split[a][b];[a]palettegen=max_colors=64:stats_mode=diff[p];[b][p]paletteuse=dither=bayer:bayer_scale=3',
-      '-loop', '0', target,
-    ]);
-    await run('rm', ['-rf', dir]);
-    console.log('  ' + st + '.gif');
+    const gif = join(outDir, `${state}.gif`);
+    execFileSync('/opt/homebrew/bin/ffmpeg', [
+      '-y', '-framerate', String(Math.round(1000 / DELAY)),
+      '-i', join(tmp, 'f_%04d.png'),
+      '-vf', 'split[a][b];[a]palettegen=max_colors=96:stats_mode=diff[p];[b][p]paletteuse=dither=bayer:bayer_scale=3',
+      '-loop', '0', gif,
+    ], { stdio: 'ignore' });
+    rmSync(tmp, { recursive: true, force: true });
+    return gif;
   } else {
-    const target = all ? join(out, st + '.png') : out;
-    await el.screenshot({ path: target, omitBackground: !bg });
-    await page.close();
-    console.log('  ' + (all ? st + '.png' : target));
+    const png = join(outDir, `${state}.png`);
+    await box.screenshot({ path: png });
+    return png;
   }
 }
 
-await browser.close();
-server.kill();
-console.log('完成 →', out);
+mkdirSync(OUT, { recursive: true });
 
-function run(cmd, args) {
-  return new Promise((res, rej) => {
-    const p = spawn(cmd, args, { stdio: 'ignore' });
-    p.on('exit', c => (c === 0 ? res() : rej(new Error(cmd + ' 退出码 ' + c))));
-  });
+if (ALL) {
+  const states = Object.keys(PACK);
+  const gif = flag('gif');
+  for (const s of states) {
+    const f = await shoot(s, flag('text') ? PACK[s] : '', OUT);
+    console.log('  ' + f.split('/').pop());
+  }
+  console.log(`完成 → ${OUT}`);
+} else {
+  const f = await shoot(STATE, TEXT, OUT);
+  console.log('完成 → ' + f);
 }
+
+await browser.close();
+process.exit(0);

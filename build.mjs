@@ -1,11 +1,14 @@
 #!/usr/bin/env node
-/* peepface build — core.js 是唯一源，生成两份产物
+/* peepface v2 构建：把 ESM 引擎 + 接口层 + DSH 适配器拼成一个 ModuleLoader 插件
  *
- *   dist/peepface.js      浏览器：<script src> 直接用，暴露 window.peepface
- *   dist/dsh-client.js    DSH 插件：ModuleLoader 包装，含状态判定与拖拽
+ *   engine.mjs   原版引擎（ESM，58 条 export）
+ *   runtime.mjs  rolldown 运行时垫片
+ *   index.js     我们的接口层（ESM）
+ *   adapters/dsh.js  DSH 适配器（状态探测 → facts）
  *
- * 用法：node build.mjs
+ * 输出：plugin/lib/client.js
  */
+
 import { readFileSync, writeFileSync, mkdirSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -13,25 +16,93 @@ import { fileURLToPath } from 'node:url';
 const here = dirname(fileURLToPath(import.meta.url));
 const read = p => readFileSync(join(here, p), 'utf8');
 
-const core = read('core.js');
+/* ---------- 1. runtime：去掉 export ---------- */
+let runtime = read('runtime.mjs')
+  .replace(/^\/\/.*$/gm, '')
+  .replace(/^export\s+const\s+t\s*=/m, 'const __rolldownT =');
+
+/* ---------- 2. engine：去掉 import，收集 export，去掉 export 语句 ---------- */
+let engine = read('engine.mjs');
+
+// 收集所有导出的名字
+const exported = new Set();
+for (const m of engine.matchAll(/^export\s*\{\s*([^}]+)\}\s*;?/gm)) {
+  for (const name of m[1].split(',')) {
+    const n = name.trim();
+    if (n) exported.add(n);
+  }
+}
+
+// 去掉 import / export 语句
+engine = engine
+  .replace(/^import\s*\{[^}]*\}\s*from\s*["'][^"']+["'];?\s*$/gm, '')
+  .replace(/^export\s*\{\s*[^}]+\}\s*;?\s*$/gm, '')
+  .replace(/^export\s+default\s+[^;]+;?\s*$/gm, '');
+
+/* ---------- 3. index.js：import 换成解构，去掉 export ---------- */
+let iface = read('index.js');
+
+// 收集接口层自己要导出的名字（给 window.peepface 用）
+const ifaceExports = new Set();
+for (const m of iface.matchAll(/^export\s+(?:const|function|let)\s+([A-Za-z_$][\w$]*)/gm)) {
+  ifaceExports.add(m[1]);
+}
+// export default { ... } 里的也收
+const defMatch = iface.match(/^export\s+default\s*\{([\s\S]*?)\};?\s*$/m);
+if (defMatch) {
+  for (const n of defMatch[1].split(',')) {
+    const t = n.trim().split(':')[0].trim();
+    if (t) ifaceExports.add(t);
+  }
+}
+
+iface = iface
+  .replace(/^import\s*\{([^}]*)\}\s*from\s*['"][^'"]*engine\.mjs['"];?\s*$/gm,
+           (_, names) => `const { ${names.replace(/\s+as\s+/g, ': ')} } = __ENGINE;`)
+  .replace(/^export\s+default\s*\{[\s\S]*?\};?\s*$/gm, '')
+  .replace(/^export\s+(const|function|let)\s+/gm, '$1 ');
+
+/* ---------- 4. adapter ---------- */
 const adapter = read('adapters/dsh.js');
 
-const BANNER = `/* peepface v0.1.0 — 由 build.mjs 从 core.js 生成，不要手改 */\n`;
+/* ---------- 5. 拼装 ---------- */
+const BANNER = `/* peepface v2 — 由 build-v2.mjs 生成，不要手改
+ * 引擎：Grok Bot 头像引擎的原样移植（不裁剪）
+ * 接口：createFace / sync / 形状与颜色
+ */`;
 
-/* 1) 浏览器版：core.js 已经是 UMD 形态，直接加 banner */
-const browser = BANNER + core;
-
-/* 2) DSH 插件版：core + adapter，包进 ModuleLoader */
-const dsh = `${BANNER}window.__ModuleLoader__.load({
+const out = `${BANNER}
+window.__ModuleLoader__.load({
   id: "dsh-plugin-peepface",
   factory(require) {
-${indent(core, 4)}
+/* ================= 引擎运行时 ================= */
+${indent(runtime, 4)}
+
+/* ================= 引擎本体（IIFE 隔离，避免顶层重名） ================= */
+const __ENGINE = (function () {
+  const e = __rolldownT;   // 原 import { t as e }
+${indent(engine, 2)}
+  return { ${[...exported].join(', ')} };
+})();
+
+/* ================= 接口层 ================= */
+${indent(iface, 4)}
+
+/* ================= DSH 适配器 ================= */
 ${indent(adapter, 4)}
+
+/* ================= 模块返回 ================= */
+    const API = { ${[...ifaceExports].join(', ')} };
+    try { window.peepface = API; } catch (e) {}
+
     return {
       inject: [],
       apply(ctx) {
         try {
-          ctx.effect(() => window.__peepfaceDsh.mount(document.body), "dsh-plugin-peepface: overlay");
+          ctx.effect(
+            () => window.__peepfaceDsh.mount(document.body),
+            "dsh-plugin-peepface: overlay",
+          );
         } catch (error) {
           console.error("[peepface] apply failed:", error);
         }
@@ -41,29 +112,13 @@ ${indent(adapter, 4)}
 });
 `;
 
-function indent(text, n) {
+mkdirSync(join(here, 'plugin/lib'), { recursive: true });
+writeFileSync(join(here, 'plugin/lib/client.js'), out);
+console.log(`plugin/lib/client.js  ${(out.length / 1024).toFixed(0)} KB`);
+console.log(`  引擎导出 ${exported.size} 个符号`);
+console.log(`  接口导出 ${ifaceExports.size} 个符号：${[...ifaceExports].slice(0, 10).join(', ')}…`);
+
+function indent(str, n) {
   const pad = ' '.repeat(n);
-  return text.split('\n').map(l => (l.trim() ? pad + l : l)).join('\n');
+  return str.split('\n').map(l => (l ? pad + l : l)).join('\n');
 }
-
-/* 3) ESM 包装：让 `import { createFace } from 'peepface'` 可用 */
-const esm = `${BANNER}import './peepface.js';
-
-const api = globalThis.peepface;
-if (!api) throw new Error('peepface: UMD 入口没有正确挂载');
-
-export const createFace = api.createFace;
-export const STATES = api.STATES;
-export const VERSION = api.VERSION;
-export default api;
-`;
-
-mkdirSync(join(here, 'dist'), { recursive: true });
-writeFileSync(join(here, 'dist/peepface.js'), browser, 'utf8');
-writeFileSync(join(here, 'dist/peepface.mjs'), esm, 'utf8');
-writeFileSync(join(here, 'dist/dsh-client.js'), dsh, 'utf8');
-
-const kb = s => (Buffer.byteLength(s) / 1024).toFixed(1);
-console.log(`dist/peepface.js     ${kb(browser)} KB   (浏览器 <script>)`);
-console.log(`dist/peepface.mjs    ${kb(esm)} KB   (ESM import)`);
-console.log(`dist/dsh-client.js   ${kb(dsh)} KB   (DSH 插件)`);

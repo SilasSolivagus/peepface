@@ -1,319 +1,544 @@
-/* peepface × DSH 适配层
- * 依赖 window.peepface.createFace（由 core.js 提供）
- * 负责：状态判定、拖拽、位置记忆、主题
+/* peepface v2 · DSH 适配器
+ *
+ * v1 的探测层直接产出「状态」，一堆 if-else 优先级链。
+ * v2 只产出「事实」，判断交给 resolveFacts()。
+ *
+ * 好处：DSH 哪天暴露真实状态，只换数据源，判断逻辑一行不动。
  */
-(function (root) {
-  'use strict';
 
-  var POS_KEY = 'peepface:pos';
-  var SIZE = 84;
+(function () {
+  var root = typeof window !== 'undefined' ? window : globalThis;
+  var api = (root.peepface = root.peepface || {});
 
-  /* ---------- 主题 ---------- */
-  var RGB = /rgba?\((\d+)[,\s]+(\d+)[,\s]+(\d+)(?:[,\s\/]+([\d.]+))?\)/;
+  /* ---------- 颜色工具 ---------- */
 
   function parseRGB(str) {
-    var m = RGB.exec(str || '');
-    if (!m) return null;
-    if (m[4] !== undefined && +m[4] <= 0.5) return null;
-    return { r: +m[1], g: +m[2], b: +m[3] };
+    var m = /rgba?\(\s*(\d+)[,\s]+(\d+)[,\s]+(\d+)/.exec(str || '');
+    return m ? { r: +m[1], g: +m[2], b: +m[3] } : null;
   }
-  function lum(c) { return 0.2126 * c.r + 0.7152 * c.g + 0.0722 * c.b; }
-
+  function lum(c) {
+    return 0.2126 * c.r + 0.7152 * c.g + 0.0722 * c.b;
+  }
   function pageDark() {
-    var nodes = [document.body, document.documentElement];
-    for (var i = 0; i < nodes.length; i++) {
-      if (!nodes[i]) continue;
-      var c = parseRGB(getComputedStyle(nodes[i]).backgroundColor);
-      if (c) return lum(c) < 110;
+    try {
+      var bg = getComputedStyle(document.body).backgroundColor;
+      var c = parseRGB(bg);
+      if (c) return lum(c) < 128;
+      var scheme = getComputedStyle(document.documentElement).colorScheme || '';
+      return scheme.indexOf('dark') >= 0;
+    } catch (e) {
+      return true;
     }
-    return matchMedia('(prefers-color-scheme: dark)').matches;
   }
 
   /* ---------- 拖拽 ---------- */
-  function clampPos(x, y) {
-    var maxX = Math.max(0, window.innerWidth - SIZE - 4);
-    var maxY = Math.max(0, window.innerHeight - SIZE - 4);
-    return [Math.min(Math.max(0, x), maxX), Math.min(Math.max(0, y), maxY)];
-  }
 
   function attachDrag(host, onTap) {
+    var KEY = 'peepface:pos';
+    var drag = null;
+
     function place(x, y) {
+      var w = host.offsetWidth || 96;
+      var h = host.offsetHeight || 96;
+      var maxX = innerWidth - w - 12;
+      var maxY = innerHeight - h - 12;
+      x = Math.max(12, Math.min(maxX, x));
+      y = Math.max(12, Math.min(maxY, y));
       host.style.left = x + 'px';
       host.style.top = y + 'px';
       host.style.right = 'auto';
       host.style.bottom = 'auto';
+      return { x: x, y: y };
     }
 
     try {
-      var saved = JSON.parse(localStorage.getItem(POS_KEY) || 'null');
-      if (saved && typeof saved.x === 'number') {
-        var xy = clampPos(saved.x, saved.y);
-        place(xy[0], xy[1]);
-      }
-    } catch (e) {}
-
-    var dragging = false, gx = 0, gy = 0, travel = 0;
+      var saved = JSON.parse(localStorage.getItem(KEY) || 'null');
+      if (saved && typeof saved.x === 'number') place(saved.x, saved.y);
+      else place(innerWidth - 120, innerHeight - 140);
+    } catch (e) {
+      place(innerWidth - 120, innerHeight - 140);
+    }
 
     host.addEventListener('pointerdown', function (e) {
       if (e.button !== 0) return;
-      var r = host.getBoundingClientRect();
-      gx = e.clientX - r.left;
-      gy = e.clientY - r.top;
-      dragging = true;
-      travel = 0;
-      try { host.setPointerCapture(e.pointerId); } catch (_) {}
+      drag = { x: e.clientX, y: e.clientY, moved: false, sl: host.offsetLeft, st: host.offsetTop };
+      host.setPointerCapture(e.pointerId);
+      host.style.cursor = 'grabbing';
     });
 
     host.addEventListener('pointermove', function (e) {
-      if (!dragging) return;
-      travel += Math.abs(e.movementX || 0) + Math.abs(e.movementY || 0);
-      var p = clampPos(e.clientX - gx, e.clientY - gy);
-      place(p[0], p[1]);
+      if (!drag) return;
+      var dx = e.clientX - drag.x;
+      var dy = e.clientY - drag.y;
+      if (!drag.moved && Math.hypot(dx, dy) > 6) drag.moved = true;
+      if (drag.moved) place(drag.sl + dx, drag.st + dy);
     });
 
     function end(e) {
-      if (!dragging) return;
-      dragging = false;
-      try { host.releasePointerCapture(e.pointerId); } catch (_) {}
-      if (travel < 6) {
-        onTap();
-      } else {
-        var r = host.getBoundingClientRect();
-        try {
-          localStorage.setItem(POS_KEY, JSON.stringify({ x: Math.round(r.left), y: Math.round(r.top) }));
-        } catch (_) {}
-      }
+      if (!drag) return;
+      var moved = drag.moved;
+      drag = null;
+      host.style.cursor = 'grab';
+      try {
+        localStorage.setItem(KEY, JSON.stringify({ x: host.offsetLeft, y: host.offsetTop }));
+      } catch (err) {}
+      if (!moved && onTap) onTap();
     }
     host.addEventListener('pointerup', end);
     host.addEventListener('pointercancel', end);
-
-    window.addEventListener('resize', function () {
-      if (!host.style.left) return;
-      var r = host.getBoundingClientRect();
-      var p = clampPos(r.left, r.top);
-      place(p[0], p[1]);
-    });
   }
 
-  /* ---------- 状态判定 ---------- */
-
-  var MANUAL_ORDER = ['idle', 'listening', 'thinking', 'searching', 'streaming', 'working', 'finished'];
+  /* ---------- 事实收集 ---------- */
 
   function startProbe(face) {
-    var probe = { lastMut: 0, rate: 0, failedUntil: 0, finishedUntil: 0, searchUntil: 0, waitUntil: 0, lastError: false };
-    var net = { last: 0, lastPost: 0, lastErr: 0, events: [] };
-    var fresh = { text: '', at: 0 };
-    var lastTextChange = 0, lastBusyAt = 0, lastKeyAt = 0, wokeUntil = 0;
-    var pending = null, pendingCount = 0;
-    var manualUntil = 0;
-
-    var bodyText = function () { return document.body ? (document.body.innerText || '') : ''; };
-    var prevLen = bodyText().length, prevT = performance.now();
+    var state = {
+      lastTextChange: performance.now(),
+      lastKeyAt: 0,
+      lastPostAt: 0,
+      prevLen: 0,
+      rate: 0,
+      prevT: performance.now(),
+      fresh: '',
+      freshAt: 0,
+      failedAt: 0,
+      finishedAt: 0,
+      searchUntil: 0,
+      awaitingUntil: 0,
+      wokeUntil: 0,
+      asleep: false,
+      manualUntil: 0,
+    };
 
     var ERROR_RE = /(失败|错误|异常|Error|Failed)/;
     var SEARCH_RE = /(web_search|web_fetch|\bgrep\b|\bglob\b|\bbrowse\b|检索|搜索结果|正在搜索|读取目录)/i;
     var APPROVAL_RE = /(批准|允许|拒绝|同意执行|需要你确认|等待确认|Approve|Deny|Allow once)/i;
 
-    function markNet() {
-      var t = performance.now();
-      net.last = t;
-      net.events.push(t);
-      if (net.events.length > 80) net.events.shift();
-    }
-    function pushFresh(str) {
-      if (!str) return;
-      fresh.text = (fresh.text + ' ' + str).slice(-3000);
-      fresh.at = performance.now();
-    }
+    state.prevLen = (document.body.innerText || '').length;
 
     var mo = new MutationObserver(function (muts) {
-      probe.lastMut = performance.now();
       for (var i = 0; i < muts.length; i++) {
         var m = muts[i];
-        if (m.type === 'characterData') pushFresh(m.target.data);
+        if (m.type === 'characterData') state.fresh += ' ' + m.target.data;
         else if (m.addedNodes) {
           for (var j = 0; j < m.addedNodes.length; j++) {
             var n = m.addedNodes[j];
-            if (n.nodeType === 1 || n.nodeType === 3) pushFresh(n.textContent);
+            if (n.nodeType === 1 || n.nodeType === 3) state.fresh += ' ' + (n.textContent || '');
           }
         }
       }
+      state.fresh = state.fresh.slice(-3000);
+      state.freshAt = performance.now();
     });
-    if (document.body) mo.observe(document.body, { childList: true, subtree: true, characterData: true });
+    mo.observe(document.body, { subtree: true, childList: true, characterData: true });
 
-    /* 网络：只用来判断「有在途请求」，不作为工作状态的主信号 */
-    var origFetch = window.fetch;
-    if (typeof origFetch === 'function') {
-      window.fetch = function () {
-        markNet();
-        var p = origFetch.apply(this, arguments);
-        if (p && typeof p.then === 'function') {
-          p.then(function (res) {
-            markNet();
-            if (!res.ok) net.lastErr = performance.now();
-          }, function () {
-            net.lastErr = performance.now();
-            markNet();
-          });
-        }
-        return p;
-      };
-    }
-
-    ['WebSocket', 'EventSource'].forEach(function (key) {
-      var Orig = window[key];
-      if (!Orig) return;
-      try {
-        window[key] = new Proxy(Orig, {
-          construct: function (t, args) {
-            var inst = new t(...args);
-            try { inst.addEventListener('message', markNet); } catch (e) {}
-            return inst;
-          }
-        });
-      } catch (e) {}
-    });
-
-    document.addEventListener('keydown', function (e) {
-      if (e.isComposing || e.keyCode === 229) return;
-      if (e.key !== 'Enter' || e.shiftKey) return;
-      var t = e.target;
-      if (!t) return;
-      if (t.tagName === 'TEXTAREA' || t.tagName === 'INPUT' || t.isContentEditable === true) {
-        lastKeyAt = performance.now();
-        net.lastPost = lastKeyAt;
+    function onKey(e) {
+      if (e.isComposing) return;
+      if (e.key === 'Enter' && !e.shiftKey) {
+        state.lastKeyAt = performance.now();
+        state.lastPostAt = performance.now();
+        state.wokeUntil = performance.now() + 2200;
+        state.asleep = false;
       } else {
-        lastKeyAt = performance.now();
+        state.lastKeyAt = performance.now();
       }
-    }, true);
-    document.addEventListener('keydown', function () { lastKeyAt = performance.now(); }, true);
+    }
+    document.addEventListener('keydown', onKey, true);
 
     function inputHasText() {
       var a = document.activeElement;
       if (!a) return false;
-      if (a.tagName === 'TEXTAREA' || a.tagName === 'INPUT') return (a.value || '').trim().length > 0;
+      if (a.tagName === 'TEXTAREA') return (a.value || '').trim().length > 0;
       if (a.isContentEditable) return (a.innerText || '').trim().length > 0;
       return false;
     }
 
-    /* 迟滞：连续 3 次一致才切；finished / failed 例外 */
-    function commit(next) {
-      if (next === 'finished' || next === 'failed') {
-        if (face.getState() !== next) face.setState(next);
-        pending = null; pendingCount = 0;
-        return;
+    function collect(now) {
+      var idleFor = now - state.lastTextChange;
+      var textFlowing = now - state.lastTextChange < 1400 && state.rate > 2;
+      var typing = now - state.lastKeyAt < 3000 && inputHasText();
+
+      var facts = {
+        running: textFlowing || typing,
+        composing: state.rate > 55,
+        activity: null,
+        awaiting: null,
+        settlement: null,
+      };
+
+      if (now < state.searchUntil) {
+        facts.activity = { kind: 'searching' };
+        facts.running = true;
+      } else if (textFlowing) {
+        facts.activity = { kind: 'working' };
       }
-      if (next === face.getState()) { pending = null; pendingCount = 0; return; }
-      if (pending === next) {
-        if (++pendingCount >= 3) {
-          face.setState(next);
-          pending = null; pendingCount = 0;
-        }
-      } else {
-        pending = next; pendingCount = 1;
+
+      if (now < state.awaitingUntil) {
+        facts.awaiting = { reason: 'approval' };
       }
+
+      if (now < state.failedAt + 2600) {
+        facts.settlement = { outcome: 'error', at: state.failedAt };
+      } else if (now < state.finishedAt + 1800) {
+        facts.settlement = { outcome: 'success', at: state.finishedAt };
+      }
+
+      return facts;
     }
 
     var timer = setInterval(function () {
       var now = performance.now();
-      var text = bodyText();
-      var len = text.length;
-      var dt = Math.max(0.001, (now - prevT) / 1000);
-      if (len !== prevLen) lastTextChange = now;
-      var inst = (len - prevLen) / dt;
-      probe.rate = probe.rate * 0.55 + inst * 0.45;
-      prevLen = len; prevT = now;
 
-      if (now - probe.lastMut < 400) {
-        var hit = ERROR_RE.test(text.slice(-240));
-        if (hit && !probe.lastError) probe.failedUntil = now + 2600;
-        probe.lastError = hit;
+      /* --- 观察 --- */
+      var text = document.body.innerText || '';
+      var dt = Math.max(0.001, (now - state.prevT) / 1000);
+      if (text.length !== state.prevLen) state.lastTextChange = now;
+      var inst = (text.length - state.prevLen) / dt;
+      state.rate = state.rate * 0.55 + inst * 0.45;
+      state.prevLen = text.length;
+      state.prevT = now;
+
+      /* 错误只认新鲜的 */
+      if (state.fresh && now - state.freshAt < 1500) {
+        var tail = text.slice(-240);
+        if (ERROR_RE.test(tail) && state.failedAt < now - 3000) state.failedAt = now;
+        if (SEARCH_RE.test(state.fresh)) state.searchUntil = now + 3000;
+        if (APPROVAL_RE.test(state.fresh)) state.awaitingUntil = now + 4000;
+        state.fresh = '';
       }
 
-      if (fresh.text && now - fresh.at < 1500) {
-        if (SEARCH_RE.test(fresh.text)) probe.searchUntil = now + 3000;
-        if (APPROVAL_RE.test(fresh.text)) probe.waitUntil = now + 4000;
-        fresh.text = '';
+      /* 休眠：单独处理，不属于 facts */
+      var idleFor = now - state.lastTextChange;
+      if (idleFor > 300000) state.asleep = true;
+      if (state.asleep) {
+        if (idleFor < 1500) {
+          state.asleep = false;
+          state.wokeUntil = now + 2200;
+        } else {
+          face.state('sleeping');
+          return;
+        }
       }
-
-      var idleFor = now - lastTextChange;
-
-      if (idleFor > 300000 && face.getState() !== 'sleeping' && face.getState() !== 'waking') {
-        wokeUntil = 0;
-        commit('sleeping');
+      if (now < state.wokeUntil) {
+        face.state('waking');
         return;
       }
-      if (face.getState() === 'sleeping' && idleFor < 1500) wokeUntil = now + 2000;
 
-      if (now < manualUntil) return;
+      if (now < state.manualUntil) return;
 
-      if (wokeUntil && now < wokeUntil) { commit('waking'); return; }
-
-      var textFlowing = now - lastTextChange < 1400 && probe.rate > 2;
-      var typing = now - lastKeyAt < 3000 && inputHasText();
-      var justSent = now - net.lastPost < 2000 && now - lastKeyAt < 2000;
-
-      var next = 'idle';
-      if (now < probe.failedUntil) next = 'failed';
-      else if (now < probe.waitUntil) next = 'waiting';
-      else if (now < probe.finishedUntil) next = 'finished';
-      else if (now < probe.searchUntil) next = 'searching';
-      else if (probe.rate > 55) { next = 'streaming'; lastBusyAt = now; }
-      else if (textFlowing) { next = 'working'; lastBusyAt = now; }
-      else if (typing) next = 'listening';
-      else if (justSent && probe.rate < 1) next = 'thinking';
-      else if (idleFor > 1400 && now - lastBusyAt < 8000) {
-        probe.finishedUntil = now + 1800;
-        next = 'finished';
+      /* 一轮结束 → 记一个 settlement */
+      var wasBusy = now - state.lastTextChange < 3000;
+      if (wasBusy) state.lastBusyAt = now;
+      if (
+        !wasBusy &&
+        state.lastBusyAt &&
+        now - state.lastBusyAt < 8000 &&
+        now - state.lastBusyAt > 1400 &&
+        state.finishedAt < state.lastBusyAt
+      ) {
+        state.finishedAt = now;
       }
 
-      commit(next);
+      /* --- 判断交给协议 --- */
+      face.sync(collect(now));
     }, 200);
 
     return {
       tap: function () {
-        var cur = face.getState();
-        var i = MANUAL_ORDER.indexOf(cur);
-        face.setState(MANUAL_ORDER[(i + 1) % MANUAL_ORDER.length] || 'idle');
-        manualUntil = performance.now() + 4000;
+        var order = ['idle', 'listening', 'thinking', 'searching', 'streaming', 'working', 'finished'];
+        var cur = face.state ? undefined : undefined;
+        var i = order.indexOf(window.__peepfaceLast || 'idle');
+        var next = order[(i + 1) % order.length];
+        window.__peepfaceLast = next;
+        face.state(next);
+        state.manualUntil = performance.now() + 4000;
       },
       stop: function () {
         clearInterval(timer);
         try { mo.disconnect(); } catch (e) {}
-      }
+        document.removeEventListener('keydown', onKey, true);
+      },
     };
+  }
+
+  /* ---------- 设置面板 ---------- */
+
+  var CFG_KEY = 'peepface:config';
+
+  function loadConfig() {
+    try {
+      var raw = localStorage.getItem(CFG_KEY);
+      if (raw) return JSON.parse(raw);
+    } catch (e) {}
+    return null;
+  }
+  function saveConfig(cfg) {
+    try { localStorage.setItem(CFG_KEY, JSON.stringify(cfg)); } catch (e) {}
+  }
+
+  function buildPanel(face, host, onChange) {
+    var cfg = loadConfig() || {};
+    var wrap = document.createElement('div');
+    wrap.id = 'peepface-panel';
+
+    var dark = pageDark();
+    var bg = dark ? '#14141a' : '#ffffff';
+    var fg = dark ? '#ececef' : '#111114';
+    var line = dark ? '#26262c' : '#e6e6e2';
+    var dim = dark ? '#71717a' : '#8a8a92';
+
+    wrap.style.cssText = [
+      'position:fixed', 'z-index:2147483001',
+      'width:308px', 'max-height:70vh', 'overflow:auto',
+      'background:' + bg, 'color:' + fg,
+      'border:1px solid ' + line, 'border-radius:14px',
+      'box-shadow:0 12px 40px rgba(0,0,0,.35)',
+      'padding:14px', 'box-sizing:border-box', 'font:13px/1.5 -apple-system,"PingFang SC",system-ui,sans-serif',
+      'display:none',
+    ].join(';');
+
+    var title = document.createElement('div');
+    title.textContent = '外观';
+    title.style.cssText = 'font-size:12px;letter-spacing:.06em;text-transform:uppercase;color:' + dim + ';margin-bottom:10px';
+    wrap.appendChild(title);
+
+    /* 形状网格 */
+    var grid = document.createElement('div');
+    grid.style.cssText = 'display:grid;grid-template-columns:repeat(6,1fr);gap:6px;margin-bottom:14px';
+
+    var cells = [];
+    var SHAPES = root.peepface.SHAPES || ['sphere'];
+
+    function paintThumbs(color) {
+      cells.forEach(function (cell) {
+        cell.replaceChildren();
+        try {
+          root.peepface.createFace(cell, {
+            shape: cell.dataset.shape, size: 38, color: color, state: 'idle', static: true,
+          });
+        } catch (e) { cell.textContent = '?'; }
+      });
+    }
+
+    SHAPES.forEach(function (name) {
+      var cell = document.createElement('div');
+      cell.dataset.shape = name;
+      cell.style.cssText = [
+        'aspect-ratio:1', 'border-radius:9px', 'cursor:pointer',
+        'border:1px solid transparent', 'background:' + (dark ? '#0e0e12' : '#f6f6f4'),
+        'display:flex', 'align-items:center', 'justify-content:center', 'padding:3px',
+      ].join(';');
+
+      try {
+        root.peepface.createFace(cell, {
+          shape: name, size: 38,
+          color: cfg.color || (dark ? '#E8E8E8' : '#0a0a0c'),
+          state: 'idle', static: true,
+        });
+      } catch (e) {
+        cell.textContent = '?';
+      }
+
+      cell.onclick = function () {
+        cfg.shape = name;
+        saveConfig(cfg);
+        face.shape(name);
+        paintSelection();
+        onChange && onChange(cfg);
+      };
+
+      grid.appendChild(cell);
+      cells.push(cell);
+    });
+    wrap.appendChild(grid);
+
+    /* 颜色 */
+    var colorRow = document.createElement('div');
+    colorRow.style.cssText = 'display:flex;flex-wrap:wrap;gap:7px;margin-bottom:10px';
+    var swatches = [];
+    var PALETTE = root.peepface.PALETTE || [];
+
+    PALETTE.forEach(function (c) {
+      var sw = document.createElement('div');
+      sw.style.cssText = [
+        'width:24px', 'height:24px', 'border-radius:7px', 'cursor:pointer',
+        'border:2px solid transparent', 'background:' + (c.id === 'black' ? '#111' : c.value),
+      ].join(';');
+      sw.title = c.label;
+      sw.dataset.color = c.value;
+      sw.onclick = function () {
+        cfg.color = c.value;
+        saveConfig(cfg);
+        face.color(c.value);
+        paintThumbs(c.value);
+        paintSelection();
+        onChange && onChange(cfg);
+      };
+      colorRow.appendChild(sw);
+      swatches.push(sw);
+    });
+    wrap.appendChild(colorRow);
+
+    /* 自定义颜色 */
+    var customRow = document.createElement('div');
+    customRow.style.cssText = 'display:flex;gap:8px;align-items:center;margin-bottom:14px';
+
+    var picker = document.createElement('input');
+    picker.type = 'color';
+    picker.value = /^#[0-9a-f]{6}$/i.test(cfg.color || '') ? cfg.color : '#ff6700';
+    picker.style.cssText = 'width:32px;height:26px;border:none;background:none;padding:0;cursor:pointer';
+
+    var hexInput = document.createElement('input');
+    hexInput.type = 'text';
+    hexInput.placeholder = '#RRGGBB';
+    hexInput.value = cfg.color || '';
+    hexInput.style.cssText = [
+      'flex:1', 'background:' + (dark ? '#0e0e12' : '#f6f6f4'),
+      'border:1px solid ' + line, 'border-radius:7px',
+      'color:' + fg, 'font:inherit', 'font-size:12px', 'padding:5px 8px', 'outline:none',
+    ].join(';');
+
+    function applyCustom(v) {
+      cfg.color = v;
+      saveConfig(cfg);
+      face.color(v);
+      paintThumbs(v);
+      paintSelection();
+    }
+    picker.oninput = function () { hexInput.value = picker.value; applyCustom(picker.value); };
+    hexInput.onchange = function () {
+      var v = hexInput.value.trim();
+      if (v) { picker.value = /^#[0-9a-f]{6}$/i.test(v) ? v : picker.value; applyCustom(v); }
+    };
+
+    customRow.appendChild(picker);
+    customRow.appendChild(hexInput);
+    wrap.appendChild(customRow);
+
+    /* 重置 */
+    var reset = document.createElement('button');
+    reset.textContent = '重置';
+    reset.style.cssText = [
+      'font:inherit', 'font-size:12px', 'padding:6px 12px', 'border-radius:8px',
+      'border:1px solid ' + line, 'background:transparent', 'color:' + fg, 'cursor:pointer',
+    ].join(';');
+    reset.onclick = function () {
+      cfg = {};
+      saveConfig(cfg);
+      face.shape('sphere');
+      var base = dark ? '#E8E8E8' : '#0a0a0c';
+      face.color(base);
+      paintThumbs(base);
+      paintSelection();
+      onChange && onChange(cfg);
+    };
+    wrap.appendChild(reset);
+
+    function paintSelection() {
+      var curShape = cfg.shape || 'sphere';
+      cells.forEach(function (c) {
+        var on = c.dataset.shape === curShape;
+        c.style.outline = on ? '2px solid #ff6700' : 'none';
+        c.style.outlineOffset = on ? '-1px' : '0';
+      });
+      var curColor = (cfg.color || (dark ? '#E8E8E8' : '#0a0a0c')).toLowerCase();
+      swatches.forEach(function (s) {
+        var on = s.dataset.color.toLowerCase() === curColor;
+        s.style.outline = on ? '2px solid ' + fg : 'none';
+        s.style.outlineOffset = on ? '2px' : '0';
+      });
+    }
+    paintSelection();
+
+    document.body.appendChild(wrap);
+    return wrap;
   }
 
   /* ---------- 挂载 ---------- */
 
   function mount(container) {
-    if (!root.peepface) {
-      console.error('[peepface] core.js 未加载');
+    if (!root.peepface || !root.peepface.createFace) {
+      console.error('[peepface] createFace 不可用');
       return function () {};
     }
-    if (document.getElementById('peepface-root')) return function () {};
+    if (root.__peepfaceDshMounted) return function () {};
+    root.__peepfaceDshMounted = true;
+
+    var dark = pageDark();
 
     var host = document.createElement('div');
-    host.id = 'peepface-root';
-    host.style.cssText = 'position:fixed;right:22px;bottom:96px;z-index:2147483000;';
-    (container || document.body).appendChild(host);
+    host.id = 'peepface-dsh';
+    host.style.cssText =
+      'position:fixed;width:96px;height:96px;z-index:2147483000;cursor:grab;' +
+      'user-select:none;touch-action:none;pointer-events:auto;';
+    container.appendChild(host);
 
     var face = root.peepface.createFace(host, {
+      shape: 'sphere',
+      color: dark ? '#E8E8E8' : '#0a0a0c',
+      size: 96,
       state: 'idle',
-      size: SIZE,
-      dark: pageDark(),
-      follow: true,
     });
 
     var probe = startProbe(face);
-    attachDrag(host, probe.tap);
+
+    /* 读取上次保存的外观 */
+    var saved = loadConfig();
+    if (saved && saved.shape) { try { face.shape(saved.shape); } catch (e) {} }
+    if (saved && saved.color) { try { face.color(saved.color); } catch (e) {} }
+
+    /* 点一下开设置面板 */
+    var panel = null;
+    function togglePanel() {
+      if (!panel) panel = buildPanel(face, host);
+      var open = panel.style.display === 'block';
+      if (open) {
+        panel.style.display = 'none';
+        return;
+      }
+      var r = host.getBoundingClientRect();
+      var w = panel.offsetWidth || 308;
+      var left = Math.min(window.innerWidth - w - 12, Math.max(12, r.right - w));
+      var top = r.top - 12;
+      panel.style.left = left + 'px';
+      panel.style.bottom = 'auto';
+      panel.style.top = 'auto';
+      // 优先显示在头像上方
+      var ph = panel.offsetHeight || 360;
+      if (r.top > ph + 20) {
+        panel.style.top = (r.top - ph - 12) + 'px';
+      } else {
+        panel.style.top = (r.bottom + 12) + 'px';
+      }
+      panel.style.display = 'block';
+    }
+
+    attachDrag(host, togglePanel);
+
+    /* 点外面关掉 */
+    document.addEventListener('pointerdown', function (e) {
+      if (!panel || panel.style.display !== 'block') return;
+      if (panel.contains(e.target) || host.contains(e.target)) return;
+      panel.style.display = 'none';
+    }, true);
+
+    /* 主题变化时换色 */
+    var mq = window.matchMedia ? window.matchMedia('(prefers-color-scheme: dark)') : null;
+    function onScheme() {
+      var d = pageDark();
+      host.querySelectorAll('svg path').forEach(function () {});
+      face.color(d ? '#E8E8E8' : '#0a0a0c');
+    }
+    if (mq && mq.addEventListener) mq.addEventListener('change', onScheme);
 
     return function () {
-      probe.stop();
-      face.destroy();
+      try { probe.stop(); } catch (e) {}
+      try { face.destroy(); } catch (e) {}
       try { host.remove(); } catch (e) {}
+      try { panel && panel.remove(); } catch (e) {}
+      if (mq && mq.removeEventListener) mq.removeEventListener('change', onScheme);
+      root.__peepfaceDshMounted = false;
     };
   }
 
-  root.__peepfaceDsh = { mount: mount };
-})(typeof window !== 'undefined' ? window : globalThis);
+  root.__peepfaceDsh = { mount: mount, pageDark: pageDark };
+})();

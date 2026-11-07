@@ -1,43 +1,64 @@
 export type FaceState =
-  | 'idle'
-  | 'listening'
-  | 'thinking'
-  | 'searching'
-  | 'streaming'
-  | 'working'
-  | 'waiting'
-  | 'blocked'
-  | 'finished'
-  | 'failed'
-  | 'sleeping'
-  | 'waking';
+  | 'idle' | 'listening' | 'thinking' | 'searching' | 'streaming' | 'working'
+  | 'waiting' | 'blocked' | 'finished' | 'failed' | 'sleeping' | 'waking'
+  | 'spawning' | 'reading' | 'coding' | 'running' | 'computing' | 'controlling'
+  | 'orbit' | 'progress' | 'sending' | 'writing';
+
+export interface Facts {
+  running?: boolean;
+  composing?: boolean;
+  activity?: { kind?: string; tool?: string; detail?: string; target?: string; callId?: string } | null;
+  awaiting?: { reason: string; since?: number } | null;
+  settlement?: { outcome: 'success' | 'error'; at: number } | null;
+}
 
 export interface FaceOptions {
-  /** 初始状态，默认 'idle' */
-  state?: FaceState;
-  /** 显示尺寸（px），默认 84 */
+  id?: string;
+  state?: FaceState | string;
   size?: number;
-  /** 深色主题：白脸黑眼。默认 false */
-  dark?: boolean;
-  /** 眼睛跟随鼠标，默认 true */
-  follow?: boolean;
+  shape?: string;
+  color?: string;
+  spot?: string;
+  followPointer?: boolean;
+  /** 静态模式：渲染一帧就停（用于缩略图） */
+  static?: boolean;
 }
 
 export interface Face {
-  setState(state: FaceState): void;
-  getState(): FaceState;
-  blink(): void;
+  state(name: string): Face;
+  sync(facts: Facts): Face;
+  shape(name: string): Face;
+  color(value: string): Face;
+  expression(name: string | null): Face;
+  look(x: number, y: number): Face;
+  gaze(v: unknown): Face;
+  blink(): Face;
+  restart(): Face;
+  play(flag?: boolean): Face;
+  poke(kind: string): Face;
   destroy(): void;
-  readonly el: HTMLElement;
+  readonly id: string;
+  readonly engine: unknown;
 }
 
-export function createFace(container: Element, options?: FaceOptions): Face;
-export const STATES: FaceState[];
-export const VERSION: string;
+export declare function createFace(host: HTMLElement | string, options?: FaceOptions): Face;
+export declare function resolveFacts(facts: Facts | null, now?: number): string;
+export declare function defineShape(name: string, spec: {
+  path?: string;
+  silhouette?: unknown;
+  layout?: { width?: number; height?: number; gap?: number; shiftY?: number };
+  size?: number;
+  seat?: unknown;
+  tolerance?: number;
+}): { name: string; layout: Record<string, number> };
+export declare function shapes(): string[];
+export declare function shapeFromId(id: string): string;
+export declare function colorFromId(id: string): string;
 
-declare const peepface: {
-  createFace: typeof createFace;
-  STATES: typeof STATES;
-  VERSION: typeof VERSION;
-};
-export default peepface;
+export declare const SHAPES: string[];
+export declare const SHAPE_ALIAS: Record<string, string>;
+export declare const PALETTE: { id: string; label: string; value: string }[];
+export declare const STATE: Record<string, FaceState>;
+export declare const STATE_ALL: FaceState[];
+export declare const STATE_HELP: Record<string, string>;
+export declare function resolveColor(input?: string, fallback?: string): string;

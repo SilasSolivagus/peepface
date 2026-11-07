@@ -1,7 +1,7 @@
 {
   "name": "dsh-plugin-peepface",
-  "version": "0.1.0",
-  "description": "会看你的 DSH 头像：跟随鼠标、眨眼、随会话状态自动变化（观察式，不拦截请求）",
+  "version": "2.0.0",
+  "description": "会看你的 DSH 头像：26 种形状、任意颜色、22 个状态（引擎移植自 Grok Bot）",
   "type": "module",
   "main": "./lib/index.js",
   "exports": {
@@ -9,25 +9,11 @@
     "./client": "./lib/client.js",
     "./package.json": "./package.json"
   },
-  "files": [
-    "lib",
-    "cordis.patch.yml",
-    "README.md"
-  ],
-  "keywords": [
-    "dsh-plugin",
-    "avatar",
-    "peepface"
-  ],
+  "files": ["lib", "cordis.patch.yml", "README.md"],
+  "keywords": ["dsh-plugin", "avatar", "peepface"],
   "license": "MIT",
   "dsh": {
-    "bundle": {
-      "patch": "./cordis.patch.yml"
-    },
-    "client": {
-      "platform": "web",
-      "immediately": true,
-      "inject": []
-    }
+    "bundle": { "patch": "./cordis.patch.yml" },
+    "client": { "platform": "web", "immediately": true, "inject": [] }
   }
 }

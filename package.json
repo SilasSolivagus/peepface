@@ -1,32 +1,31 @@
 {
   "name": "peepface",
-  "version": "0.1.0",
-  "description": "agent 状态的视觉词汇表：12 个生命周期状态、12 KB、零依赖纯 SVG",
+  "version": "2.0.0",
+  "description": "会表达状态的脸：26 种形状、任意颜色、22 个状态，一行 sync 接上任何 agent",
   "type": "module",
-  "main": "./dist/peepface.mjs",
-  "module": "./dist/peepface.mjs",
-  "browser": "./dist/peepface.js",
+  "main": "./index.js",
+  "module": "./index.js",
   "types": "./peepface.d.ts",
   "exports": {
     ".": {
       "types": "./peepface.d.ts",
-      "import": "./dist/peepface.mjs",
-      "default": "./dist/peepface.js"
+      "import": "./index.js",
+      "default": "./index.js"
     },
-    "./states.json": "./states.json",
+    "./engine": "./engine.mjs",
     "./plugin-dsh": "./plugin-dsh/lib/client.js",
     "./package.json": "./package.json"
   },
   "files": [
-    "dist/",
-    "core.js",
-    "states.json",
+    "index.js",
+    "engine.mjs",
+    "runtime.mjs",
+    "peepface.d.ts",
+    "PROTOCOL.md",
     "README.md",
     "LICENSE",
-    "peepface.d.ts"
-  ],
-  "sideEffects": [
-    "./dist/peepface.js"
+    "plugin-dsh/lib/client.js",
+    "plugin-dsh/package.json"
   ],
   "keywords": [
     "agent",
@@ -49,7 +48,8 @@
     "url": "https://github.com/SilasSolivagus/peepface/issues"
   },
   "scripts": {
-    "build": "node build.mjs",
-    "prepublishOnly": "node build.mjs"
+    "build:plugin": "node build.mjs",
+    "build:single": "node build-single.mjs",
+    "export": "node export.mjs"
   }
 }

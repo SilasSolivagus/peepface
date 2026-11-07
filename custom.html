@@ -1,0 +1,105 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<title>自定义形状 · 动起来</title>
+<style>
+  :root { --bg:#0b0b0d; --fg:#ececef; --dim:#71717a; --line:#1f1f25; --accent:#ff6700; }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--fg);min-height:100vh;
+       font:14px/1.6 -apple-system,"PingFang SC",system-ui,sans-serif;
+       display:flex;flex-direction:column;align-items:center;justify-content:center;gap:28px;padding:40px}
+  h1{font-size:18px;font-weight:560;margin:0;letter-spacing:-.01em}
+  .sub{color:var(--dim);font-size:13px;margin:0;text-align:center}
+  .row{display:flex;gap:40px;align-items:flex-end;flex-wrap:wrap;justify-content:center}
+  .cell{display:flex;flex-direction:column;align-items:center;gap:10px}
+  .cell .face{width:180px;height:180px}
+  .cell .name{font-size:12px;color:var(--dim)}
+  .cell .path{font:10px/1.4 ui-monospace,Menlo,monospace;color:#3f3f46;max-width:180px;
+              overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .bar{display:flex;gap:8px;flex-wrap:wrap;justify-content:center;max-width:760px}
+  button{font:inherit;font-size:12px;padding:7px 13px;border-radius:9px;cursor:pointer;
+         border:1px solid var(--line);background:#14141a;color:var(--fg)}
+  button:hover{background:#1c1c24}
+  button.on{background:var(--accent);border-color:var(--accent);color:#000}
+  #log{font:12px/1.5 ui-monospace,Menlo,monospace;color:var(--dim);height:18px}
+</style>
+</head>
+<body>
+
+<h1>自定义形状</h1>
+<p class="sub">三个用 SVG path 定义的脸，跑在同一个引擎上</p>
+
+<div class="row" id="row"></div>
+
+<div class="bar" id="bar"></div>
+<div id="log">点状态 / 或自动轮播</div>
+
+<script type="module">
+import { createFace, defineShape, STATE_ALL, STATE_HELP } from './index.js';
+
+const CUSTOM = {
+  mySquircle: 'M 100 10 C 150 10 190 50 190 100 C 190 150 150 190 100 190 C 50 190 10 150 10 100 C 10 50 50 10 100 10 Z',
+  myDiamond:  'M 100 8 L 192 100 L 100 192 L 8 100 Z',
+  myArch:     'M 20 190 L 20 80 C 20 40 55 10 100 10 C 145 10 180 40 180 80 L 180 190 Z',
+};
+
+const row = document.getElementById('row');
+const faces = [];
+
+for (const [name, path] of Object.entries(CUSTOM)) {
+  defineShape(name, { path });
+
+  const cell = document.createElement('div');
+  cell.className = 'cell';
+  const box = document.createElement('div');
+  box.className = 'face';
+  const label = document.createElement('div');
+  label.className = 'name';
+  label.textContent = name;
+  const p = document.createElement('div');
+  p.className = 'path';
+  p.textContent = path.slice(0, 40) + '…';
+
+  cell.appendChild(box);
+  cell.appendChild(label);
+  cell.appendChild(p);
+  row.appendChild(cell);
+
+  faces.push(createFace(box, { shape: name, size: 180, color: '#E8E8E8', state: 'idle' }));
+}
+
+/* 状态按钮 */
+const bar = document.getElementById('bar');
+for (const s of STATE_ALL) {
+  const b = document.createElement('button');
+  b.textContent = s;
+  b.dataset.state = s;
+  b.onclick = () => apply(s);
+  bar.appendChild(b);
+}
+
+function apply(s) {
+  faces.forEach(f => f.state(s));
+  document.querySelectorAll('#bar button').forEach(n => n.classList.toggle('on', n.dataset.state === s));
+  document.getElementById('log').textContent = `${s} — ${STATE_HELP[s] || ''}`;
+  current = s;
+}
+
+/* 自动轮播 */
+let current = 'idle';
+const LOOP = ['idle', 'thinking', 'working', 'searching', 'streaming', 'blocked', 'finished', 'failed', 'sleeping'];
+let idx = 0;
+const auto = setInterval(() => {
+  idx = (idx + 1) % LOOP.length;
+  apply(LOOP[idx]);
+}, 2600);
+
+/* 点任意处暂停轮播 */
+document.addEventListener('click', () => clearInterval(auto), { once: true });
+
+window.__faces = faces;
+window.__apply = apply;
+</script>
+</body>
+</html>
