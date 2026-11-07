@@ -215,8 +215,7 @@ ms([[82,86,44], [140,86,44], [82,144,44], [140,144,44]])   // 四圆融合 → �
 
 **这不是我们写的。** 我们做的只是把它从 bundle 里拆出来，让它能独立跑。
 
-过程 → **[STORY.md](STORY.md)**（三次推翻、六次试错、改了多少版）
-方法 → **[HOW.md](HOW.md)**（定位、AST 索引、依赖闭包、逐位验证）
+**怎么拆的 → [HOW.md](HOW.md)**（定位、AST 索引、依赖闭包、逐位验证，全部带命令和数字）
 
 ### 我们写的
 
@@ -242,8 +241,7 @@ build*.mjs    打包
 | | |
 |---|---|
 | [PROTOCOL.md](PROTOCOL.md) | 状态协议：facts 结构、求值顺序、工具映射 |
-| [STORY.md](STORY.md) | **这张脸是怎么来的** —— 三次推翻、六次试错 |
-| [HOW.md](HOW.md) | 技术方法：定位、AST 索引、依赖闭包、逐位验证 |
+| [HOW.md](HOW.md) | 引擎是怎么从一个 382 KB 的 chunk 里拆出来的 |
 | [IDEA-desktop.md](IDEA-desktop.md) | 设想：做成桌面应用 |
 | [`studio.html`](studio.html) | 换装间 |
 | [`custom-standalone.html`](custom-standalone.html) | 单文件版 |
