@@ -23,6 +23,7 @@
     "_runtime.mjs",
     "peepface.d.ts",
     "PROTOCOL.md",
+    "HOW.md",
     "README.md",
     "LICENSE",
     "plugin-dsh/lib/client.js",
