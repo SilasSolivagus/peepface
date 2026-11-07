@@ -1,0 +1,35 @@
+<!DOCTYPE html><html><head><meta charset="utf-8"><style>
+  html,body{margin:0;background:transparent;}
+  #stage{display:flex;flex-direction:column;align-items:center;justify-content:center;}
+  #t{font-family:"PingFang SC","Hiragino Sans GB",-apple-system,sans-serif;
+     font-weight:600;letter-spacing:.02em;line-height:1;white-space:nowrap;}
+</style></head><body>
+<div id="stage"><div id="f"></div><div id="t"></div></div>
+<script type="module">
+import { createFace } from './index.js';
+const q = new URLSearchParams(location.search);
+const size = Number(q.get('size') || 240);
+const text = q.get('text') || '';
+const stage = document.getElementById('stage');
+const pad = text ? Math.round(size * 0.34) : 0;
+const faceSize = size - pad;
+stage.style.width = size + 'px';
+stage.style.height = size + 'px';
+if (q.get('bg')) { stage.style.background = q.get('bg'); document.body.style.display='grid'; document.body.style.placeItems='center'; document.body.style.minHeight='100vh'; }
+document.getElementById('f').style.cssText = 'width:'+faceSize+'px;height:'+faceSize+'px';
+if (text) {
+  const t = document.getElementById('t');
+  t.textContent = text;
+  t.style.fontSize = '26px';
+  t.style.marginTop = Math.round(size*0.035)+'px';
+  t.style.color = '#EDEDED';
+}
+window.__face = createFace('#f', {
+  shape: q.get('shape') || 'sphere',
+  size: faceSize,
+  color: q.get('ink') || '#FF6700',
+  spot: q.get('spot') || '#2B1B12',
+  state: q.get('state') || 'idle',
+});
+window.__ready = true;
+</script></body></html>

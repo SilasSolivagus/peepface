@@ -28,9 +28,9 @@ const STATE = arg('state', 'idle');
 const ALL = flag('all');
 const OUT = arg('out', join(here, 'stickers-v2'));
 const SIZE = Number(arg('size', 240));
-const INK = arg('ink', '#FF6700');
-const SPOT = arg('spot', '#2B1B12');
-const BG = arg('bg', '#ffffff');
+const INK = arg('ink', '#EDEDED');
+const SPOT = arg('spot', '#121212');
+const BG = arg('bg', '#0B0B0D');
 const TEXT = arg('text', '');
 const SHAPE = arg('shape', 'sphere');
 const FRAMES = Number(arg('frames', 16));
@@ -77,7 +77,7 @@ if (text) {
   t.textContent = text;
   t.style.fontSize = '26px';
   t.style.marginTop = Math.round(size*0.035)+'px';
-  t.style.color = q.get('dark') === '1' ? '#f2f2f3' : '#101014';
+  t.style.color = '#EDEDED';
 }
 window.__face = createFace('#f', {
   shape: q.get('shape') || 'sphere',

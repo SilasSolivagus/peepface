@@ -27,7 +27,7 @@ npm i peepface
 ```js
 import { createFace } from 'peepface';
 
-const face = createFace('#face', { shape: 'cloud', color: '#FF6700' });
+const face = createFace('#face', { shape: 'sphere', color: '#EDEDED', spot: '#121212' });
 
 face.sync({ running: true, activity: { tool: 'read_file' } });
 // → 脸在「读文件」

@@ -331,7 +331,7 @@
       try {
         root.peepface.createFace(cell, {
           shape: name, size: 38,
-          color: cfg.color || (dark ? '#E8E8E8' : '#0a0a0c'),
+          color: cfg.color || ('#EDEDED'),
           state: 'idle', static: true,
         });
       } catch (e) {
@@ -425,7 +425,7 @@
       cfg = {};
       saveConfig(cfg);
       face.shape('sphere');
-      var base = dark ? '#E8E8E8' : '#0a0a0c';
+      var base = '#EDEDED';
       face.color(base);
       paintThumbs(base);
       paintSelection();
@@ -440,7 +440,7 @@
         c.style.outline = on ? '2px solid #ff6700' : 'none';
         c.style.outlineOffset = on ? '-1px' : '0';
       });
-      var curColor = (cfg.color || (dark ? '#E8E8E8' : '#0a0a0c')).toLowerCase();
+      var curColor = (cfg.color || ('#EDEDED')).toLowerCase();
       swatches.forEach(function (s) {
         var on = s.dataset.color.toLowerCase() === curColor;
         s.style.outline = on ? '2px solid ' + fg : 'none';
@@ -474,7 +474,7 @@
 
     var face = root.peepface.createFace(host, {
       shape: 'sphere',
-      color: dark ? '#E8E8E8' : '#0a0a0c',
+      color: '#EDEDED',
       size: 96,
       state: 'idle',
     });

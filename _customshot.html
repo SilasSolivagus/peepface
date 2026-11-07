@@ -1,0 +1,21 @@
+<!DOCTYPE html><html><head><meta charset="utf-8"><style>
+html,body{margin:0;background:#0B0B0D}
+#r{display:flex;gap:24px;align-items:center;justify-content:center;width:760px;height:190px}
+.c{width:142px;height:142px}
+</style></head><body><div id="r"></div>
+<script type="module">
+import { createFace, defineShape } from './index.js';
+const shapes = {
+  squircle: 'M 100 10 C 150 10 190 50 190 100 C 190 150 150 190 100 190 C 50 190 10 150 10 100 C 10 50 50 10 100 10 Z',
+  diamond:  'M 100 8 L 192 100 L 100 192 L 8 100 Z',
+  arch:     'M 20 190 L 20 80 C 20 40 55 10 100 10 C 145 10 180 40 180 80 L 180 190 Z',
+};
+const r = document.getElementById('r');
+for (const [name, path] of Object.entries(shapes)) {
+  defineShape(name, { path });
+  const d = document.createElement('div'); d.className = 'c';
+  r.appendChild(d);
+  createFace(d, { shape: name, size: 142, color: '#EDEDED', spot: '#121212', state: 'idle' });
+}
+window.__ready = true;
+</script></body></html>
