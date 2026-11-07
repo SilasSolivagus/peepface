@@ -1,0 +1,55 @@
+{
+  "name": "peepface",
+  "version": "0.1.0",
+  "description": "agent 状态的视觉词汇表：12 个生命周期状态、12 KB、零依赖纯 SVG",
+  "type": "module",
+  "main": "./dist/peepface.mjs",
+  "module": "./dist/peepface.mjs",
+  "browser": "./dist/peepface.js",
+  "types": "./peepface.d.ts",
+  "exports": {
+    ".": {
+      "types": "./peepface.d.ts",
+      "import": "./dist/peepface.mjs",
+      "default": "./dist/peepface.js"
+    },
+    "./states.json": "./states.json",
+    "./plugin-dsh": "./plugin-dsh/lib/client.js",
+    "./package.json": "./package.json"
+  },
+  "files": [
+    "dist/",
+    "core.js",
+    "states.json",
+    "README.md",
+    "LICENSE",
+    "peepface.d.ts"
+  ],
+  "sideEffects": [
+    "./dist/peepface.js"
+  ],
+  "keywords": [
+    "agent",
+    "avatar",
+    "status",
+    "svg",
+    "ui",
+    "ai",
+    "llm",
+    "status-indicator",
+    "peepface"
+  ],
+  "license": "Apache-2.0",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/SilasSolivagus/peepface.git"
+  },
+  "homepage": "https://silassolivagus.github.io/peepface/",
+  "bugs": {
+    "url": "https://github.com/SilasSolivagus/peepface/issues"
+  },
+  "scripts": {
+    "build": "node build.mjs",
+    "prepublishOnly": "node build.mjs"
+  }
+}

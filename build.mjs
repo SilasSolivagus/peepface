@@ -46,10 +46,24 @@ function indent(text, n) {
   return text.split('\n').map(l => (l.trim() ? pad + l : l)).join('\n');
 }
 
+/* 3) ESM 包装：让 `import { createFace } from 'peepface'` 可用 */
+const esm = `${BANNER}import './peepface.js';
+
+const api = globalThis.peepface;
+if (!api) throw new Error('peepface: UMD 入口没有正确挂载');
+
+export const createFace = api.createFace;
+export const STATES = api.STATES;
+export const VERSION = api.VERSION;
+export default api;
+`;
+
 mkdirSync(join(here, 'dist'), { recursive: true });
 writeFileSync(join(here, 'dist/peepface.js'), browser, 'utf8');
+writeFileSync(join(here, 'dist/peepface.mjs'), esm, 'utf8');
 writeFileSync(join(here, 'dist/dsh-client.js'), dsh, 'utf8');
 
 const kb = s => (Buffer.byteLength(s) / 1024).toFixed(1);
-console.log(`dist/peepface.js     ${kb(browser)} KB`);
-console.log(`dist/dsh-client.js   ${kb(dsh)} KB`);
+console.log(`dist/peepface.js     ${kb(browser)} KB   (浏览器 <script>)`);
+console.log(`dist/peepface.mjs    ${kb(esm)} KB   (ESM import)`);
+console.log(`dist/dsh-client.js   ${kb(dsh)} KB   (DSH 插件)`);
