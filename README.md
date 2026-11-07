@@ -159,7 +159,7 @@ createFace('#face', { shape: 'myArch' });
 ```
 
 <p align="center">
-  <img src="assets/custom.png" width="640" alt="自定义形状" />
+  <img src="assets/custom.gif" width="760" alt="三个自定义形状：花朵、云朵、水滴" />
 </p>
 
 **能力边界**（实测出来的，不是猜的）：
