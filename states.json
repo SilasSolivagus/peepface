@@ -1,0 +1,274 @@
+{
+  "$comment": "peepface 状态词汇表 v0.1 — 规定 agent 状态在视觉上必须有什么差别，不规定用什么技术实现。",
+  "version": "0.1",
+  "principle": "每个状态必须有「和谁不像」的明确答案。分不清的状态等于没有状态。",
+  "layers": {
+    "lifecycle": {
+      "$comment": "系统状态：程序自己知道，可自动判定。决定形体、眼形、眼位、节奏。",
+      "states": {
+        "idle": {
+          "means": "没事干，但醒着",
+          "visual": {
+            "shape": "正圆",
+            "eyes": "竖胶囊 11.5×24，倾 -13°",
+            "motion": "注视缓慢漂移 ±8°，呼吸 0.8%",
+            "blink": "2.6–6 秒一次"
+          },
+          "trigger": [
+            "5 秒内没有任何文本变化"
+          ],
+          "differs_from": {
+            "listening": "listening 的眼位是前倾的，idle 是中性的",
+            "sleeping": "idle 有眨眼和漂移，sleeping 眼皮压住不动"
+          },
+          "must_not": "完全静止。一丝呼吸和漂移是「活着」和「冻住」的分界线。"
+        },
+        "listening": {
+          "means": "用户正在输入，我在等",
+          "visual": {
+            "shape": "正圆",
+            "eyes": "同 idle，但眼位整体前倾（gaze bias 下移 30%）",
+            "motion": "呼吸略快",
+            "blink": "2.4–5 秒一次"
+          },
+          "trigger": [
+            "3 秒内有过键盘输入",
+            "且输入框有内容"
+          ],
+          "differs_from": {
+            "idle": "眼位前倾 + 呼吸略快。差别很小，但必须存在。"
+          },
+          "must_not": "和 idle 完全一致。用户打完字抬头看，应该能感到「它在等我」。"
+        },
+        "thinking": {
+          "means": "收到请求了，还没开始输出",
+          "visual": {
+            "shape": "不规则 blob（3/5 阶谐波）",
+            "eyes": "11.5×21，倾 -28°（像在琢磨）",
+            "motion": "眼上飘，呼吸 1.4%",
+            "decor": "轨道环出现"
+          },
+          "trigger": [
+            "按回车后 2 秒内且无输出"
+          ],
+          "differs_from": {
+            "working": "thinking 有形变 + 轨道环，working 是圆的正经的",
+            "idle": "形状不同，不需要看眼睛也能分辨"
+          },
+          "must_not": "和 streaming 混用。thinking 是「还没开始」，流式输出是「已经在说」。"
+        },
+        "searching": {
+          "means": "在翻找（检索、读文件、扫目录）",
+          "visual": {
+            "shape": "正圆",
+            "eyes": "横缝 17×6",
+            "motion": "眼左右扫视 3.6 Hz，像在检索",
+            "blink": "3–6 秒一次"
+          },
+          "trigger": [
+            "工具调用且属检索类"
+          ],
+          "differs_from": {
+            "working": "working 的眼不动，searching 的眼在扫",
+            "thinking": "thinking 眼向上飘且有形变"
+          },
+          "must_not": "和 working 共用。检索是「在外面找」，干活是「在里面做」。"
+        },
+        "streaming": {
+          "means": "正在往外吐字",
+          "visual": {
+            "shape": "正圆",
+            "eyes": "竖胶囊（同 idle）",
+            "motion": "呼吸 1.2%",
+            "blink": "3–6 秒一次"
+          },
+          "trigger": [
+            "文本增长率 > 55 字符/秒"
+          ],
+          "differs_from": {
+            "working": "视觉接近，靠速率区分。若实现资源有限，可与 working 合并。"
+          },
+          "must_not": "无。这个状态的边界本来就模糊。"
+        },
+        "working": {
+          "means": "在做事，用户不需要介入",
+          "visual": {
+            "shape": "正圆",
+            "eyes": "横椭圆 19×8.5（眯成一条缝）",
+            "motion": "呼吸 2%（比 idle 明显）",
+            "blink": "3–7 秒一次"
+          },
+          "trigger": [
+            "1.4 秒内文本变过且增长率 > 2",
+            "或有在途请求"
+          ],
+          "differs_from": {
+            "blocked": "不歪、不变形、不冒符号。working 是「正常推进」。",
+            "thinking": "形状是圆，不是 blob"
+          },
+          "must_not": "加任何「卡住」的视觉信号。那会让人以为出问题了。"
+        },
+        "waiting": {
+          "means": "在等你决定（审批、确认、选择）",
+          "visual": {
+            "shape": "blob（轻微）",
+            "eyes": "竖胶囊，眼位侧看 55%",
+            "motion": "呼吸 0.6%（很稳）",
+            "decor": "半透明轨道环"
+          },
+          "trigger": [
+            "有未决的审批或提问"
+          ],
+          "differs_from": {
+            "idle": "侧看 + 轻微形变。idle 是正视的。",
+            "thinking": "没有上飘，环只有一半透明度"
+          },
+          "must_not": "和 idle 一样。等着你的时候最需要被看见。"
+        },
+        "blocked": {
+          "means": "过不去，需要人拉一把",
+          "visual": {
+            "shape": "竖向拉长（0.9×1.12）",
+            "eyes": "10.5×19，倾 +30°（歪着）",
+            "motion": "呼吸 0.5%（几乎停）",
+            "decor": "符号（! / 汗滴 / 泛红）"
+          },
+          "trigger": [
+            "权限被拒",
+            "依赖缺失",
+            "明确的阻塞错误"
+          ],
+          "differs_from": {
+            "failed": "blocked 是「还站得住」，failed 是「倒了」。failed 呼吸更慢、眼更散。",
+            "working": "形状和眼形完全不同"
+          },
+          "must_not": "和 working 用同一个形体。这是最需要一眼分清的一对。"
+        },
+        "finished": {
+          "means": "干完了",
+          "visual": {
+            "shape": "横向撑开（1.14×0.88）",
+            "eyes": "弯月笑眼 16×7，倾 -18°",
+            "motion": "呼吸 0.6%",
+            "duration": "1.8 秒后自动回 idle"
+          },
+          "trigger": [
+            "忙过之后，文本静止 1.4 秒"
+          ],
+          "differs_from": {
+            "idle": "形状更宽、眼睛是弯的。一眼可辨。"
+          },
+          "must_not": "停留超过 2 秒。超过就变成「常态」，失去信号价值。"
+        },
+        "failed": {
+          "means": "出错了，血本无归",
+          "visual": {
+            "shape": "正圆（不是拉长——拉长是 blocked 的）",
+            "eyes": "下垂眼 11×16，倾 -44°，眼位向下",
+            "motion": "呼吸 0.4%（比 blocked 更慢）"
+          },
+          "trigger": [
+            "请求失败",
+            "尾部文本出现 失败/错误/Error"
+          ],
+          "differs_from": {
+            "blocked": "blocked 是竖长脸 + 歪眼（还站得住）；failed 是圆脸 + 下垂眼（塌了）。形状不同，不看眼睛也能分。"
+          },
+          "must_not": "和 blocked 完全相同。如果实现里两者一样，就把它们合并成一个状态，不要假装有两个。"
+        },
+        "sleeping": {
+          "means": "很久没人用了",
+          "visual": {
+            "shape": "正圆",
+            "eyes": "横线 20×3.2（闭成一条线）",
+            "motion": "呼吸 0.4%（极慢）",
+            "blink": "不眨，眼皮一直压着"
+          },
+          "trigger": [
+            "5 分钟没有任何文本变化"
+          ],
+          "differs_from": {
+            "idle": "眼皮是闭的，没有眨眼",
+            "working": "眼睛形状完全不同"
+          },
+          "must_not": "在 5 分钟内出现。这是「我已经睡了」，不是「我累了」。"
+        },
+        "waking": {
+          "means": "被叫醒了",
+          "visual": {
+            "shape": "正圆",
+            "eyes": "大眼 13×29（猛地睁开）",
+            "motion": "呼吸 1.6%",
+            "duration": "2 秒后回到被吵醒时的状态"
+          },
+          "trigger": [
+            "从 sleeping 恢复，且有活动"
+          ],
+          "differs_from": {
+            "idle": "眼睛明显更大",
+            "surprised 反应": "视觉接近，但 waking 是状态机的一环，不是反应"
+          },
+          "must_not": "停留超过 2 秒。醒了就是醒了。"
+        }
+      }
+    },
+    "reaction": {
+      "$comment": "情绪反应：需要理解内容才能触发。不进状态机，由事件调用。可覆盖在任意 lifecycle 上。",
+      "states": {
+        "happy": "弯月眼，身体变宽 —— 用户夸了它 / 任务顺利",
+        "excited": "身体快速抖动 + 轨道加速",
+        "laughing": "身体高频抖动，闭眼",
+        "proud": "身体微微上浮，眼睛半闭",
+        "curious": "两眼不对称（一大一小），歪头",
+        "playful": "身体左右摇摆",
+        "shy": "眼位躲开，轻微缩小",
+        "surprised": "眼睛猛地放大",
+        "suspicious": "眯眼 + 眼位偏移",
+        "angry": "眼形变锐，身体拉高",
+        "confused": "斜线眼",
+        "sad": "眼向下垂",
+        "drowsy": "眼皮半垂",
+        "bored": "眼睛看向一边，呼吸变慢",
+        "scared": "眼睛放大 + 身体缩小",
+        "celebrate": "整圈旋转 + 彩带",
+        "approving": "轻轻点头"
+      },
+      "note": "这 17 个在原版里各自绑定了一组 clip，但视觉上大多是「同一套形体 + 不同表情」。实现时优先级远低于 lifecycle。"
+    },
+    "morph": {
+      "$comment": "装饰动画：无语义，挂在状态上开关。",
+      "states": {
+        "orbit": "环绕细环，缓慢旋转",
+        "radar": "放射状扫描线",
+        "progress": "环形进度",
+        "spawning": "粒子聚拢",
+        "alerting": "感叹号弹出"
+      }
+    }
+  },
+  "aliases": {
+    "$comment": "业务状态名 → 视觉状态。这一层让使用者保留自己的词汇。",
+    "reading": "working",
+    "coding": "working",
+    "running": "working",
+    "computing": "working",
+    "controlling": "working",
+    "retrieving": "searching",
+    "browsing": "searching",
+    "awaiting_approval": "waiting",
+    "awaiting_user": "waiting",
+    "done": "finished",
+    "error": "failed",
+    "permission_denied": "blocked"
+  },
+  "timing": {
+    "blink_close_ratio": 0.42,
+    "blink_min": 260,
+    "finished_hold": 1800,
+    "thinking_max": 2500,
+    "idle_after_quiet": 1400,
+    "sleep_after": 300000,
+    "wake_hold": 2000,
+    "state_hysteresis": 600
+  }
+}

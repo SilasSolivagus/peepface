@@ -1,0 +1,4 @@
+# dsh-plugin-peepface bundle patch
+- insert:
+    - id: peepface
+      name: dsh-plugin-peepface

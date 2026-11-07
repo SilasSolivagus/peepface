@@ -1,0 +1,122 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>peepface — agent 状态的视觉词汇表</title>
+<style>
+  :root {
+    --bg: #0b0b0d;
+    --fg: #e8e8e8;
+    --dim: #6b6b72;
+    --line: #1e1e22;
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; background: var(--bg); color: var(--fg); }
+  body {
+    font: 14px/1.6 -apple-system, BlinkMacSystemFont, "SF Pro Text", "PingFang SC", system-ui, sans-serif;
+    padding: 64px 40px 96px;
+    max-width: 1180px; margin: 0 auto;
+  }
+
+  header { margin-bottom: 56px; }
+  h1 {
+    font-size: 30px; font-weight: 500; letter-spacing: -.02em;
+    margin: 0 0 12px;
+  }
+  .lede {
+    font-size: 15px; color: var(--dim); max-width: 620px; margin: 0;
+  }
+  .lede b { color: var(--fg); font-weight: 500; }
+
+  .grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+    gap: 8px;
+  }
+
+  figure {
+    margin: 0; padding: 24px 12px 18px;
+    border: 1px solid var(--line); border-radius: 14px;
+    display: flex; flex-direction: column; align-items: center; gap: 14px;
+    background: #0e0e11;
+    transition: border-color .2s;
+  }
+  figure:hover { border-color: #2e2e35; }
+
+  .face-slot { width: 84px; height: 84px; }
+
+  figcaption { text-align: center; }
+  .name {
+    display: block; font: 12px/1 ui-monospace, "SF Mono", Menlo, monospace;
+    letter-spacing: .04em; color: var(--fg);
+  }
+  .diff {
+    display: block; margin-top: 6px; font-size: 11px; line-height: 1.45;
+    color: var(--dim); max-width: 130px;
+  }
+
+  footer {
+    margin-top: 56px; padding-top: 24px; border-top: 1px solid var(--line);
+    font-size: 12px; color: var(--dim);
+    display: flex; gap: 24px; flex-wrap: wrap;
+  }
+  footer code {
+    font: 11px/1 ui-monospace, Menlo, monospace;
+    background: #16161a; padding: 3px 6px; border-radius: 4px; color: #b9b9c0;
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <h1>同一张脸，十二个状态</h1>
+  <p class="lede">
+    现在做 agent 的人，状态只有三种表达：转圈、三个点、一行小字。
+    这三种都分不清「在干活」和「卡死了」。
+    <b>把鼠标移到页面上</b>——它们都会看你。这也是十二个状态里最便宜的那一个。
+  </p>
+</header>
+
+<div class="grid" id="grid"></div>
+
+<footer>
+  <span>peepface v0.1 · 20 KB · 零依赖 · 纯 SVG</span>
+  <span><code>createFace(el, { state })</code></span>
+  <span><code>states.json</code> 定义了每个状态「和谁不像」</span>
+</footer>
+
+<script src="./dist/peepface.js"></script>
+<script>
+  const STATES = [
+    ['idle',      '没事干，但醒着'],
+    ['listening', '你在打字，我在等'],
+    ['thinking',  '收到请求，还没开口'],
+    ['searching', '在翻找，眼在扫'],
+    ['streaming', '正在往外吐字'],
+    ['working',   '在做事，别管我'],
+    ['waiting',   '等你决定'],
+    ['blocked',   '过不去，要人拉一把'],
+    ['finished',  '干完了，点个头'],
+    ['failed',    '出错了'],
+    ['sleeping',  '很久没人用'],
+    ['waking',    '被叫醒了'],
+  ];
+
+  const grid = document.getElementById('grid');
+
+  for (const [name, diff] of STATES) {
+    const fig = document.createElement('figure');
+    const slot = document.createElement('div');
+    slot.className = 'face-slot';
+    const cap = document.createElement('figcaption');
+    cap.innerHTML = '<span class="name">' + name + '</span><span class="diff">' + diff + '</span>';
+    fig.appendChild(slot);
+    fig.appendChild(cap);
+    grid.appendChild(fig);
+
+    window.peepface.createFace(slot, { state: name, size: 84, dark: true });
+  }
+</script>
+</body>
+</html>
