@@ -5,10 +5,10 @@
 <h1 align="center">peepface</h1>
 
 <p align="center">
-  <a href="https://www.npmjs.com/package/peepface"><img src="https://img.shields.io/npm/v/peepface?color=FF6700&labelColor=111" alt="npm version"></a>
-  <a href="https://www.npmjs.com/package/peepface"><img src="https://img.shields.io/npm/l/peepface?color=FF6700&labelColor=111" alt="license"></a>
-  <img src="https://img.shields.io/badge/26%20shapes-22%20states-FF6700?labelColor=111" alt="shapes and states">
-  <img src="https://img.shields.io/badge/svg-26%20kb-FF6700?labelColor=111" alt="size">
+  <a href="https://www.npmjs.com/package/peepface"><img src="https://img.shields.io/npm/v/peepface" alt="npm version"></a>
+  <img src="https://img.shields.io/badge/license-Apache--2.0-FF6700" alt="license">
+  <img src="https://img.shields.io/badge/22%20states-26%20shapes-FF6700" alt="22 states, 26 shapes">
+  <img src="https://img.shields.io/badge/size-26%20KB%20SVG-FF6700" alt="size">
 </p>
 
 <h3 align="center">
