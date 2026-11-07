@@ -5,28 +5,65 @@
 <title>peepface export</title>
 <style>
   html, body { margin: 0; background: transparent; }
-  #f { display: block; }
+  #stage {
+    display: flex; flex-direction: column;
+    align-items: center; justify-content: center;
+    box-sizing: border-box;
+  }
+  #t {
+    font-family: "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", -apple-system, sans-serif;
+    font-weight: 600; letter-spacing: .02em; line-height: 1;
+    white-space: nowrap;
+  }
 </style>
 </head>
 <body>
-<div id="f"></div>
+<div id="stage">
+  <div id="f"></div>
+  <div id="t"></div>
+</div>
 <script src="./dist/peepface.js"></script>
 <script>
   const p = new URLSearchParams(location.search);
   const state = p.get('state') || 'idle';
   const size = Number(p.get('size') || 640);
   const dark = p.get('dark') !== '0';
-  const bg = p.get('bg');            // 不传 = 透明
+  const bg = p.get('bg');
+  const text = p.get('text') || '';
+  const textSize = Number(p.get('textSize') || 26);
 
-  const host = document.getElementById('f');
+  const stage = document.getElementById('stage');
+  const faceHost = document.getElementById('f');
+  const label = document.getElementById('t');
+
+  const pad = text ? Math.round(size * 0.34) : 0;
+  const faceSize = text ? size - pad : size;
+
+  stage.style.width = size + 'px';
+  stage.style.height = size + 'px';
   if (bg) {
-    document.body.style.background = bg;
+    stage.style.background = bg;
     document.body.style.display = 'grid';
     document.body.style.placeItems = 'center';
     document.body.style.minHeight = '100vh';
   }
 
-  window.__face = peepface.createFace(host, { state: state, size: size, dark: dark, follow: false });
+  faceHost.style.width = faceSize + 'px';
+  faceHost.style.height = faceSize + 'px';
+
+  if (text) {
+    label.textContent = text;
+    label.style.fontSize = textSize + 'px';
+    label.style.marginTop = Math.round(size * 0.035) + 'px';
+    label.style.textShadow = dark
+      ? '0 0 3px rgba(0,0,0,.75), 0 1px 3px rgba(0,0,0,.5)'
+      : '0 0 3px rgba(255,255,255,.9), 0 1px 3px rgba(255,255,255,.7)';
+    label.style.color = dark ? '#f2f2f3' : '#101014';
+  }
+
+  window.__face = peepface.createFace(faceHost, {
+    state, size: faceSize, dark, follow: false,
+  });
   window.__ready = true;
 </script>
 </body>

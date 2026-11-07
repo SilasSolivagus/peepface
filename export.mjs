@@ -28,11 +28,13 @@ const STATES = ['idle', 'listening', 'thinking', 'searching', 'streaming', 'work
 
 const all = flag('all');
 const state = arg('state', 'idle');
-const size = Number(arg('size', 640));
+const size = flag('sticker') ? 240 : Number(arg('size', 640));
 const out = resolve(arg('out', 'face.png'));
 const gif = flag('gif');
 const bg = arg('bg', null);
 const dark = arg('dark', null);
+const text = arg('text', '');
+const sticker = flag('sticker');   // 240×240 + 底部文案
 
 if (!all && !argv.includes('--state')) {
   console.error('用法：node export.mjs --state <状态> --size 640 --out face.png');
@@ -76,6 +78,8 @@ for (const st of list) {
   const q = new URLSearchParams({ state: st, size: String(size) });
   if (bg) q.set('bg', bg);
   if (dark !== null) q.set('dark', dark === '1' || dark === true ? '1' : '0');
+  if (text) q.set('text', text);
+  if (sticker) q.set('textSize', '26');
 
   const page = await browser.newPage({
     viewport: { width: size + 40, height: size + 40 },
@@ -85,7 +89,7 @@ for (const st of list) {
   await page.waitForFunction('window.__ready === true');
   await page.waitForTimeout(260);          // 让呼吸/眨眼落到一个稳定相位
 
-  const el = await page.$('#f');
+  const el = await page.$('#stage');
 
   if (gif) {
     /* GIF：真实时间采样 1.6 秒，10fps */
