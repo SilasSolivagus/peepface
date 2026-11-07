@@ -82,7 +82,7 @@ window.__ModuleLoader__.load({
         neutral:   { w: 11.5, h: 24,  tilt: -13 },
         sad:       { w: 11.5, h: 21,  tilt: -28 },
         focused:   { w: 19,   h: 8.5, tilt: 0   },
-        happy:     { w: 16,   h: 7,   tilt: -18 },
+        happy:     { w: 17,   h: 6,   tilt: -6, arc: 11 },
         surprised: { w: 13,   h: 29,  tilt: -8  },
         sleepy:    { w: 20,   h: 3.2, tilt: -2  },
         confused:  { w: 10.5, h: 19,  tilt: 30  },
@@ -105,6 +105,17 @@ window.__ModuleLoader__.load({
         sleeping:  { expr:'sleepy',    shape:'circle', gaze:[0, -0.20],   breath:0.004, blink:[9, 16], asleep:1 },
         waking:    { expr:'surprised', shape:'circle', gaze:[0, 0.35],    breath:0.016, blink:[1.4, 2.6] },
       };
+
+      /* 弧线眼：一条二次贝塞尔，靠 stroke 的粗细当"眼高"。
+         笑眼（∩）和困眼（∪）都用它，只是 bulge 的正负不同。 */
+      function arcPath(cx, cy, ux, uy, hw, bulge) {
+        const p0x = cx - ux * hw, p0y = cy - uy * hw;
+        const p1x = cx + ux * hw, p1y = cy + uy * hw;
+        const upx = uy * bulge, upy = -ux * bulge;         // 屏幕上方为凸起方向
+        return 'M' + p0x.toFixed(2) + ' ' + p0y.toFixed(2) +
+               'Q' + (cx + upx).toFixed(2) + ' ' + (cy + upy).toFixed(2) +
+               ' ' + p1x.toFixed(2) + ' ' + p1y.toFixed(2);
+      }
 
       const ease = (cur, tgt, tau, dt) => cur + (tgt - cur) * (1 - Math.exp(-dt / tau));
 
@@ -221,7 +232,7 @@ window.__ModuleLoader__.load({
             ty = Math.sin(S.time * 0.42) * 8 + Math.sin(S.time * 0.17 + 1.3) * 4 + bias[0] * 18;
             tp = Math.cos(S.time * 0.31) * 5 - bias[1] * 16;
           }
-          if (cur.scan) ty += Math.sin(S.time * 3.6) * 30;
+          if (cur.scan) ty += Math.sin(S.time * 3.6) * 18;   // 幅度收小，避免单眼被压成竖条
 
           S.yaw = ease(S.yaw, ty, 0.08, dt);
           S.pitch = ease(S.pitch, tp, 0.08, dt);
@@ -271,7 +282,22 @@ window.__ModuleLoader__.load({
             const wx = ux * cR - uy * sR, wy = ux * sR + uy * cR;
             const hw = (ex.w / 2) * Math.max(0.22, uz);
             const hh = Math.max(0.3, (ex.h / 2) * vz * (1 - S.blink * 0.995));
-            el[e.id].setAttribute('d', eyePath(px, py, wx, wy, hw, hh));
+
+            if (ex.arc) {
+              const node = el[e.id];
+              node.setAttribute('d', arcPath(px, py, wx, wy, hw, ex.arc));
+              node.setAttribute('fill', 'none');
+              node.setAttribute('stroke', '#000');
+              node.setAttribute('stroke-width', (hh * 2).toFixed(2));
+              node.setAttribute('stroke-linecap', 'round');
+            } else {
+              const node = el[e.id];
+              node.setAttribute('d', eyePath(px, py, wx, wy, hw, hh));
+              node.setAttribute('fill', '#000');
+              node.removeAttribute('stroke');
+              node.removeAttribute('stroke-width');
+              node.removeAttribute('stroke-linecap');
+            }
             const vis = Math.max(0, Math.min(1, (n[2] - 0.02) / 0.22));
             el[e.id].setAttribute('opacity', vis.toFixed(2));
           }
