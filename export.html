@@ -1,0 +1,33 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<title>peepface export</title>
+<style>
+  html, body { margin: 0; background: transparent; }
+  #f { display: block; }
+</style>
+</head>
+<body>
+<div id="f"></div>
+<script src="./dist/peepface.js"></script>
+<script>
+  const p = new URLSearchParams(location.search);
+  const state = p.get('state') || 'idle';
+  const size = Number(p.get('size') || 640);
+  const dark = p.get('dark') !== '0';
+  const bg = p.get('bg');            // 不传 = 透明
+
+  const host = document.getElementById('f');
+  if (bg) {
+    document.body.style.background = bg;
+    document.body.style.display = 'grid';
+    document.body.style.placeItems = 'center';
+    document.body.style.minHeight = '100vh';
+  }
+
+  window.__face = peepface.createFace(host, { state: state, size: size, dark: dark, follow: false });
+  window.__ready = true;
+</script>
+</body>
+</html>

@@ -184,6 +184,20 @@ node build.mjs      # 改完 core.js 后重新生成 dist/
 
 ---
 
+## 导出成图片
+
+```bash
+node export.mjs --state working --size 640 --out avatar.png
+node export.mjs --all --size 240 --out png/            # 12 张 PNG
+node export.mjs --all --size 240 --gif --out gif/       # 12 个 GIF（各 1.6s）
+```
+
+可选参数：`--bg '#0b0b0d'`（背景色，不传则透明）、`--dark 1|0`（深/浅主题）。
+
+需要本机有 Chrome。用于做头像、表情包、文档配图，或者给设计稿出素材。
+
+---
+
 ## 接入新宿主
 
 `adapters/dsh.js` 是一个完整例子：怎么把一个「能画的脸」变成一个「会跟着 agent 状态变的脸」。
