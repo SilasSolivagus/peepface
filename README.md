@@ -10,7 +10,7 @@
 
 **[看 demo →](https://silassolivagus.github.io/peepface/)**　（十二张脸同时在动，鼠标移上去它们会看你）
 
-![peepface demo](assets/hero.png)
+![peepface demo](assets/demo.gif)
 
 ---
 
