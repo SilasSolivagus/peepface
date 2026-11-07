@@ -6,6 +6,8 @@
 
 12 KB · 零依赖 · 纯 SVG
 
+[**看 demo →**](https://silassolivagus.github.io/peepface/)
+
 </div>
 
 ---
