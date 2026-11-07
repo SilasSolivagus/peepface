@@ -1,35 +1,53 @@
-# peepface
+<p align="center">
+  <img src="assets/logo.svg" width="96" alt="peepface" />
+</p>
 
-**一张会表达状态的脸。26 种形状、任意颜色、22 个状态。**
+<h1 align="center">peepface</h1>
 
-给 AI agent 装一张脸——它在思考、在检索、在调工具、卡住了、干完了，你扫一眼就知道，不用读那行「正在搜索…」的小字。
+<p align="center">
+  <a href="https://www.npmjs.com/package/peepface"><img src="https://img.shields.io/npm/v/peepface?color=FF6700&labelColor=111" alt="npm version"></a>
+  <a href="https://www.npmjs.com/package/peepface"><img src="https://img.shields.io/npm/l/peepface?color=FF6700&labelColor=111" alt="license"></a>
+  <img src="https://img.shields.io/badge/26%20shapes-22%20states-FF6700?labelColor=111" alt="shapes and states">
+  <img src="https://img.shields.io/badge/svg-26%20kb-FF6700?labelColor=111" alt="size">
+</p>
 
-```js
-face.sync({ running: true, activity: { tool: 'read_file' } });  // → 脸在「读文件」
-```
+<h3 align="center">
+给 AI agent 装一张会表达状态的脸<br/>
+<span>22 个状态 · 26 种形状 · 一行 <code>sync()</code></span>
+</h3>
 
-![peepface](assets/banner.gif)
-
----
-
-## 三十秒
+<p align="center">
+  <img src="assets/banner.gif" width="760" alt="peepface 的六个状态" />
+</p>
 
 ```bash
 npm i peepface
 ```
 
-```html
-<div id="face" style="width:160px;height:160px"></div>
-<script type="module">
+```js
 import { createFace } from 'peepface';
 
-const face = createFace('#face', { shape: 'sphere', color: '#FF6700' });
+const face = createFace('#face', { shape: 'cloud', color: '#FF6700' });
 
-face.state('thinking');   // 直接指定
-</script>
+face.sync({ running: true, activity: { tool: 'read_file' } });
+// → 脸在「读文件」
 ```
 
-不想装也行：双击 [`custom-standalone.html`](custom-standalone.html)，一个文件，浏览器直接开。
+**它在思考、在检索、在调工具、卡住了、干完了——你扫一眼就知道，不用读那行「正在搜索…」的小字。**
+
+---
+
+## 目录
+
+- [为什么不用 GIF](#为什么不用-gif)
+- [状态：22 个](#状态22-个)
+- [协议：说事实，不说事件](#协议说事实不说事件)
+- [外观：26 种形状](#外观26-种形状)
+- [自定义形状](#自定义形状)
+- [换装间](#换装间)
+- [DSH 插件](#dsh-插件)
+- [引擎从哪来](#引擎从哪来)
+- [文档](#文档)
 
 ---
 
@@ -39,8 +57,8 @@ face.state('thinking');   // 直接指定
 |---|---|---|
 | 知道自己在干什么 | ❌ 一直循环 | ✅ 22 个状态 |
 | 接得上你的 agent | ❌ | ✅ 一行 `sync()` |
-| 换形状/颜色 | 重新做图 | 改参数 |
-| 体积 | 几百 KB 视频 | 26 KB SVG |
+| 换形状 / 换颜色 | 重新做图 | 改一个参数 |
+| 体积 | 几百 KB 视频 | **26 KB SVG** |
 
 **GIF 是装饰，peepface 是仪表。**
 
@@ -55,11 +73,21 @@ reading  coding  running  computing  controlling
 orbit  progress  sending  writing
 ```
 
-前 13 个通用，后面是工具族细分。别名自动转换（`tool_call` → `working`、`error` → `failed`）。
+前 13 个是通用 agent 状态，后面是工具族细分（`reading` 在读文件、`running` 在跑命令、`controlling` 在操作你的机器）。
 
 ```js
 face.state('blocked');
 ```
+
+**别名自动转换** —— 你用自己的词，视觉上大家统一：
+
+```js
+face.state('tool_call');   // → working
+face.state('error');       // → failed
+face.state('done');        // → finished
+```
+
+完整对照在 [`DEFAULT_ALIASES`](index.js)。
 
 ---
 
@@ -67,30 +95,32 @@ face.state('blocked');
 
 ```js
 face.sync({
-  running: true,                    // 在跑
-  composing: false,                 // 在输出文字
+  running: true,                    // agent 在跑
+  composing: false,                 // 正在输出文字
   activity: { tool: 'read_file' },  // 在干什么
   awaiting: null,                   // 在等人
   settlement: null,                 // 上一轮怎么结束的
 });
 ```
 
-**幂等**——重发一百遍结果一样。丢一条推送，下一帧自己修正。
+**幂等** —— 重发一百遍结果一样，丢一条推送下一帧自己修正。
 
 不需要维护状态机，不需要记事件顺序。求值只有三段：
 
 ```js
-if (facts.awaiting)       return 'blocked';
+if (facts.awaiting)       return 'blocked';        // 闸门：人没回话，别的都不算
 if (running || composing) return composing ? 'streaming' : verbToState(activity);
 if (settlement 在 8 秒内)  return success ? 'finished' : 'failed';
 return 'idle';
 ```
 
+**没有优先级数字表。** `awaiting` 一非空，`running` 那条分支根本不存在——不是「打断」，是「前者消失」。
+
 完整规格 → [PROTOCOL.md](PROTOCOL.md)
 
 ---
 
-## 外观
+## 外观：26 种形状
 
 ```js
 createFace('#face', {
@@ -106,11 +136,13 @@ tablet wedge house star6 pebble bean egg squircle capsule cylinder
 hex gem crystal shield dome arch leaf pumpkin
 ```
 
-**不传形状和颜色？** 按 `id` 的 hash 自动派生——同一个 agent 永远同一张脸，不用存任何东西。
+**不传形状和颜色？** 按 `id` 的 hash 自动派生：
 
 ```js
-createFace('#face', { id: 'agent-42' });
+createFace('#face', { id: 'agent-42' });   // → leaf #00BCA6
 ```
+
+同一个 agent 永远同一张脸，**不用存任何东西**。
 
 ---
 
@@ -126,9 +158,11 @@ defineShape('myArch', {
 createFace('#face', { shape: 'myArch' });
 ```
 
-![自定义形状](assets/custom.png)
+<p align="center">
+  <img src="assets/custom.png" width="640" alt="自定义形状" />
+</p>
 
-**能力边界**（实测出来的）：
+**能力边界**（实测出来的，不是猜的）：
 
 | 能做 | 做不了 |
 |---|---|
@@ -136,7 +170,7 @@ createFace('#face', { shape: 'myArch' });
 | 浅凹（心形那种） | 内部线条（斑纹、胡须） |
 | 眼睛自动避让 | 第三层图案 |
 
-深凹需要引擎的 3D 环结构，2D path 走的是凸包路径。
+深凹需要引擎的 3D 环结构，2D path 走的是凸包路径。**试过六次，结论如此。**
 
 ---
 
@@ -144,7 +178,9 @@ createFace('#face', { shape: 'myArch' });
 
 **https://silassolivagus.github.io/peepface/studio.html**
 
-换形状、换颜色、试穿 22 个状态、导出 PNG/SVG。
+换形状、换颜色、试穿 22 个状态、导出 PNG / SVG。
+
+不想开服务器？双击 [`custom-standalone.html`](custom-standalone.html) —— 一个文件，浏览器直接开。
 
 ---
 
@@ -155,13 +191,15 @@ createFace('#face', { shape: 'myArch' });
 "dsh-plugin-peepface": "link:/path/to/peepface/plugin-dsh"
 ```
 
-装上后右下角一张脸，**点头像换形状和颜色**，选择存 localStorage。状态由 DOM 观察驱动，不拦截请求。
+装上后右下角一张脸，**点头像换形状和颜色**，选择存 `localStorage`。
+
+状态由 DOM 观察驱动，**不拦截任何请求**。
 
 ---
 
 ## 引擎从哪来
 
-`engine.mjs` 是从 **Grok Bot**（xAI 桌面客户端）的 bundle 里**原样移植**的动画引擎，未裁剪、未修改。
+`engine.mjs`（512 KB）是从 **Grok Bot**（xAI 桌面客户端）的 bundle 里**原样移植**的动画引擎，未裁剪、未修改。
 
 它负责：球面眼睛投影、贝塞尔缓动、弹簧物理、28 段关键帧、26 种形状几何、13 种装饰渲染器。
 
@@ -190,12 +228,13 @@ build*.mjs    打包
 
 | | |
 |---|---|
-| [PROTOCOL.md](PROTOCOL.md) | 状态协议：facts、求值顺序、工具映射 |
+| [PROTOCOL.md](PROTOCOL.md) | 状态协议：facts 结构、求值顺序、工具映射 |
 | [IDEA-desktop.md](IDEA-desktop.md) | 设想：做成桌面应用 |
 | [`studio.html`](studio.html) | 换装间 |
+| [`custom-standalone.html`](custom-standalone.html) | 单文件版 |
 
 ---
 
 ## License
 
-Apache-2.0（仅覆盖 `index.js`、`adapters/`、构建脚本与文档）
+Apache-2.0 —— 仅覆盖 `index.js`、`adapters/`、构建脚本与文档。
