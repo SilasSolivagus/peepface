@@ -6,19 +6,34 @@
 
 | 文件 | 规格 | 用途 |
 |---|---|---|
-| `gif/*.gif` | 240×240，16 帧 / 1.6s，8–14 KB | 微信表情主图（动态） |
-| `png/*.png` | 240×240，白底带字 | 静态版 / 缩略图 |
-| `cover-750.png` | 750×750 | 投稿主图 |
+| `gif/*.gif` | 240×240，16 帧 / 1.6s，8–14 KB | 微信表情主图（**黑白版**） |
+| `color-gif/*.gif` | 同上 | **橙色版**（`#FF6700`） |
+| `png/*.png` | 240×240，白底带字 | 静态版（黑白） |
+| `color/*.png` | 240×240 | 静态版（橙色） |
+| `cover-750.png` | 750×750 | 投稿主图（黑白） |
+| `cover-750-color.png` | 750×750 | 投稿主图（橙色） |
 | `banner-750x400.png` | 750×400 | 横幅 |
 | `icon-50.png` | 50×50 | 图标 |
 | `icon-240.png` | 240×240 | 高清图标 |
+| `preview.html` | — | 在线预览（可切黑白/彩色、深/浅聊天） |
 | `copy.md` | — | 文案与设计说明 |
+
+## 两个版本
+
+**黑白**是 peepface 的设计语言（眼睛是洞，露出任何底色）。
+**橙色**是为表情包准备的——微信聊天里纯黑白偏素，暖色更容易被点。
+
+两套形状完全一样，只有脸的颜色不同。投稿时选一套。
 
 ## 重新生成
 
 ```bash
-# 静态
+# 静态（黑白）
 node export.mjs --state working --sticker --text "在做了在做了" --dark 0 --bg '#ffffff' --out stickers/png
+
+# 静态（橙色）
+node export.mjs --state working --sticker --text "在做了在做了" --dark 0 \
+  --color '#FF6700' --bg '#ffffff' --out stickers/color
 
 # 动态
 node export.mjs --state working --sticker --gif --text "在做了在做了" --dark 0 --bg '#ffffff' --out stickers/gif

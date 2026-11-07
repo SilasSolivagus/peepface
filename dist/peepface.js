@@ -77,9 +77,10 @@
 
   const EXPR = {
     neutral:   { w: 11.5, h: 24,  tilt: -13 },
+    calm:      { w: 13,   h: 11,  tilt: -6  },   // mi(.296,.247)
     sad:       { w: 11.5, h: 21,  tilt: -28 },
-    focused:   { w: 19,   h: 8.5, tilt: 0   },
-    happy:     { w: 17,   h: 6,   tilt: -6, arc: 11 },
+    focused:   { w: 21.5, h: 11,  tilt: 0   },   // squinted: pi(.26,.5,90)
+    happy:     { w: 13.8, h: 5.6, tilt: 0,  arc: 5.2 },   // p0[.16,-.04] Q[0,.12]
     surprised: { w: 13,   h: 29,  tilt: -8  },
     sleepy:    { w: 20,   h: 3.2, tilt: -2  },
     confused:  { w: 10.5, h: 19,  tilt: 30  },
@@ -91,7 +92,7 @@
 
   const STATES = {
     idle:      { expr:'neutral',   shape:'circle', gaze:[0, 0.05],    breath:0.008, blink:[2.6, 6.0] },
-    listening: { expr:'neutral',   shape:'circle', gaze:[0, 0.60],    breath:0.010, blink:[2.4, 5.0] },
+    listening: { expr:'calm'  ,   shape:'circle', gaze:[0, 0.60],    breath:0.010, blink:[2.4, 5.0] },
     thinking:  { expr:'sad',       shape:'blob',   gaze:[0, 0.60],    breath:0.014, blink:[2.0, 4.0], ring:1 },
     searching: { expr:'focused',   shape:'circle', gaze:[0, 0.10],    breath:0.012, blink:[3.0, 6.0], scan:1 },
     streaming: { expr:'neutral',   shape:'circle', gaze:[0, 0.15],    breath:0.012, blink:[3.0, 6.0] },
@@ -144,6 +145,7 @@
     const opts = options || {};
     const size = opts.size || 84;
     const dark = !!opts.dark;
+    const color = opts.color || (dark ? '#e8e8e8' : '#0a0a0c');
     const follow = opts.follow !== false;
     const id = 'pf' + (++uid);
 
@@ -159,8 +161,8 @@
           display: block; user-select: none;
         }
         svg { width: 100%; height: 100%; display: block; overflow: visible; }
-        .face { fill: ${dark ? '#e8e8e8' : '#0a0a0c'}; }
-        .ring { fill: none; stroke: ${dark ? '#e8e8e8' : '#0a0a0c'}; stroke-width: 1.4; opacity: 0; }
+        .face { fill: ${color}; }
+        .ring { fill: none; stroke: ${color}; stroke-width: 1.4; opacity: 0; }
       </style>
       <div class="wrap">
         <svg viewBox="-70 -70 140 140">

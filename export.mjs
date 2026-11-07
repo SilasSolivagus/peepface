@@ -34,7 +34,8 @@ const gif = flag('gif');
 const bg = arg('bg', null);
 const dark = arg('dark', null);
 const text = arg('text', '');
-const sticker = flag('sticker');   // 240×240 + 底部文案
+const sticker = flag('sticker');
+const color = arg('color', null);   // 240×240 + 底部文案
 
 if (!all && !argv.includes('--state')) {
   console.error('用法：node export.mjs --state <状态> --size 640 --out face.png');
@@ -79,6 +80,7 @@ for (const st of list) {
   if (bg) q.set('bg', bg);
   if (dark !== null) q.set('dark', dark === '1' || dark === true ? '1' : '0');
   if (text) q.set('text', text);
+  if (color) q.set('color', color);
   if (sticker) q.set('textSize', '26');
 
   const page = await browser.newPage({

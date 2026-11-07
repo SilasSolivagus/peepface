@@ -30,6 +30,7 @@
   const dark = p.get('dark') !== '0';
   const bg = p.get('bg');
   const text = p.get('text') || '';
+  const color = p.get('color') || undefined;
   const textSize = Number(p.get('textSize') || 26);
 
   const stage = document.getElementById('stage');
@@ -63,6 +64,7 @@
 
   window.__face = peepface.createFace(faceHost, {
     state, size: faceSize, dark, follow: false,
+    ...(color ? { color } : {}),
   });
   window.__ready = true;
 </script>

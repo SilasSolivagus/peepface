@@ -34,6 +34,8 @@
 <div class="bar">
   <button id="b-dark" class="on">深色聊天</button>
   <button id="b-light">浅色聊天</button>
+  <button id="b-mono" class="on">黑白</button>
+  <button id="b-color">橙色</button>
 </div>
 <div class="grid" id="grid"></div>
 <footer>每个约 1.6 秒循环 · 共约 200 KB</footer>
@@ -42,12 +44,8 @@
     'waiting','blocked','finished','failed','sleeping','waking',
     'happy','confused','surprised','angry','working_moyu'];
   const grid = document.getElementById('grid');
-  files.forEach(f => {
-    const d = document.createElement('div');
-    d.className = 'cell';
-    d.innerHTML = '<img src="./gif/' + f + '.gif" alt="' + f + '" loading="lazy">';
-    grid.appendChild(d);
-  });
+  let colored = false;
+  render();
   document.getElementById('b-dark').onclick = () => {
     document.body.classList.remove('light');
     b_dark.classList.add('on'); b_light.classList.remove('on');
@@ -55,6 +53,24 @@
   document.getElementById('b-light').onclick = () => {
     document.body.classList.add('light');
     b_light.classList.add('on'); b_dark.classList.remove('on');
+  };
+  function render() {
+    const dir = colored ? './color-gif/' : './gif/';
+    grid.innerHTML = '';
+    files.forEach(f => {
+      const d = document.createElement('div');
+      d.className = 'cell';
+      d.innerHTML = '<img src="' + dir + f + '.gif" alt="' + f + '" loading="lazy">';
+      grid.appendChild(d);
+    });
+  }
+  document.getElementById('b-mono').onclick = () => {
+    colored = false; render();
+    b_mono.classList.add('on'); b_color.classList.remove('on');
+  };
+  document.getElementById('b-color').onclick = () => {
+    colored = true; render();
+    b_color.classList.add('on'); b_mono.classList.remove('on');
   };
 </script>
 </body>
