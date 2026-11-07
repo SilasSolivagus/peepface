@@ -83,6 +83,7 @@
     sleepy:    { w: 20,   h: 3.2, tilt: -2  },
     confused:  { w: 10.5, h: 19,  tilt: 30  },
     droop:     { w: 11,   h: 16,  tilt: -44 },
+    angry:     { w: 17,   h: 7,   tilt: -30, tiltSide: true },
   };
 
   /* ---------------- 状态（来自 states.json） ---------------- */
@@ -112,6 +113,24 @@
            'Q' + (cx + upx).toFixed(2) + ' ' + (cy + upy).toFixed(2) +
            ' ' + p1x.toFixed(2) + ' ' + p1y.toFixed(2);
   }
+
+  /* ---- reaction 层：情绪反应，不进状态机，由事件触发 ---- */
+  const REACTIONS = {
+    happy:      { expr:'happy',     shape:'wide',   gaze:[0, 0.10],  breath:0.014, blink:[1.6, 3.0] },
+    confused:   { expr:'confused',  shape:'circle', gaze:[0.25, 0.05], breath:0.008, blink:[3.0, 6.0] },
+    surprised:  { expr:'surprised', shape:'circle', gaze:[0, 0.10],  breath:0.018, blink:[1.2, 2.4] },
+    angry:      { expr:'angry',     shape:'circle', gaze:[0, 0.05],  breath:0.022, blink:[3.0, 6.0] },
+  };
+
+  /* ---- 变体：同一语义的另一种演法 ---- */
+  const VARIANTS = {
+    working_moyu: { expr:'focused', shape:'circle', gaze:[0.45, -0.20], breath:0.006, blink:[4.0, 8.0] },
+  };
+
+  Object.assign(STATES, REACTIONS, VARIANTS);
+
+  const LIFECYCLE = ['idle','listening','thinking','searching','streaming','working',
+                     'waiting','blocked','finished','failed','sleeping','waking'];
 
   const ease = (cur, tgt, tau, dt) => cur + (tgt - cur) * (1 - Math.exp(-dt / tau));
 
@@ -273,7 +292,9 @@
         const uz = Math.hypot(uS[0], uS[1]) || 1e-4;
         const vz = Math.hypot(vS[0], vS[1]) || 1e-4;
         const ux = uS[0] / uz, uy = uS[1] / uz;
-        const roll = -S.yaw * 0.28 + ex.tilt;
+        // tiltSide：左右眼镜像倾斜，做出「八」字形的怒眼
+        const sideTilt = ex.tiltSide ? (e.lon > 0 ? ex.tilt : -ex.tilt) : ex.tilt;
+        const roll = -S.yaw * 0.28 + sideTilt;
         const cR = Math.cos(roll * DEG), sR = Math.sin(roll * DEG);
         const wx = ux * cR - uy * sR, wy = ux * sR + uy * cR;
         const hw = (ex.w / 2) * Math.max(0.22, uz);
@@ -348,7 +369,9 @@
 
   root.peepface = {
     createFace,
-    STATES: Object.keys(STATES),
+    STATES: LIFECYCLE,
+    REACTIONS: Object.keys(REACTIONS),
+    VARIANTS: Object.keys(VARIANTS),
     VERSION: '0.1.0',
   };
 })(typeof window !== 'undefined' ? window : globalThis);
