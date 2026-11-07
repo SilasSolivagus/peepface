@@ -474,7 +474,8 @@
 
     var face = root.peepface.createFace(host, {
       shape: 'sphere',
-      color: '#EDEDED',
+      color: '#EDEDED',      // 白球
+      spot: '#121212',       // 黑眼
       size: 96,
       state: 'idle',
     });
@@ -526,7 +527,7 @@
     function onScheme() {
       var d = pageDark();
       host.querySelectorAll('svg path').forEach(function () {});
-      face.color(d ? '#E8E8E8' : '#0a0a0c');
+      face.color('#EDEDED');
     }
     if (mq && mq.addEventListener) mq.addEventListener('change', onScheme);
 

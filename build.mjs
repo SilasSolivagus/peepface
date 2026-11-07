@@ -112,9 +112,9 @@ ${indent(adapter, 4)}
 });
 `;
 
-mkdirSync(join(here, 'plugin/lib'), { recursive: true });
-writeFileSync(join(here, 'plugin/lib/client.js'), out);
-console.log(`plugin/lib/client.js  ${(out.length / 1024).toFixed(0)} KB`);
+mkdirSync(join(here, 'plugin-dsh/lib'), { recursive: true });
+writeFileSync(join(here, 'plugin-dsh/lib/client.js'), out);
+console.log(`plugin-dsh/lib/client.js  ${(out.length / 1024).toFixed(0)} KB`);
 console.log(`  引擎导出 ${exported.size} 个符号`);
 console.log(`  接口导出 ${ifaceExports.size} 个符号：${[...ifaceExports].slice(0, 10).join(', ')}…`);
 

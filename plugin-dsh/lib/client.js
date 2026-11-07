@@ -13943,7 +13943,12 @@ const __ENGINE = (function () {
 
 
 
-  return { p_, eo, go, Xg, Yg, n_, e_, f_, d_, u_, o_, i_, hp, io, ao, ro, mp, Y, Ea, no, to, s_, c_, l_, lo, oo, Zg, Oo, ko, ja, Ns, Cc, pc, Vs, Gs, Ws, mr, hr, gr, _r, La, ka, Da, Ia, Ra, Ha, Va, Za, ba, mo, fo, gi, xi, Ua, fa, sa, ia, Ir, Ya, Ja, Xa, cc, ti, Ga, Wa, Ka };
+
+
+
+
+
+  return { p_, eo, go, Xg, Yg, n_, e_, f_, d_, u_, o_, i_, hp, io, ao, ro, mp, Y, Ea, no, to, s_, c_, l_, lo, oo, Zg, Oo, ko, ja, Ns, Cc, pc, Vs, Gs, Ws, ms, ds, fs, ls, Sg, mr, hr, gr, _r, La, ka, Da, Ia, Ra, Ha, Va, Za, ba, mo, fo, gi, xi, Ua, fa, sa, ia, Ir, Ya, Ja, Xa, cc, ti, Ga, Wa, Ka };
 })();
 
 /* ================= 接口层 ================= */
@@ -13953,7 +13958,7 @@ const __ENGINE = (function () {
      * 这个文件是唯一属于我们的代码。
      */
 
-    const {  p_, o_, cc, Oo, Ns, Cc, pc  } = __ENGINE;
+    const {  p_, o_, cc, Oo, Ns, Cc, pc, ms  } = __ENGINE;
     /* ================================================================== *
      * 形状：引擎支持的全部 26 种
      * ================================================================== */
@@ -14094,7 +14099,7 @@ const __ENGINE = (function () {
       let bbox = { w: 2, h: 2 };
 
       if (!silhouette) {
-        const pts = Ns(String(spec.path), 4);          // 解析 + 简化
+        const pts = Ns(String(spec.path), spec.tolerance ?? 0.5);  // 解析 + 简化（容差越小点越密）
         if (!pts || pts.length < 3) throw new Error('defineShape: 路径点数不足');
         const norm = Cc(pts);                          // 归一化到 -1..1
         silhouette = pc(norm);                         // 转成引擎格式
@@ -14585,7 +14590,7 @@ const __ENGINE = (function () {
           try {
             root.peepface.createFace(cell, {
               shape: name, size: 38,
-              color: cfg.color || (dark ? '#E8E8E8' : '#0a0a0c'),
+              color: cfg.color || ('#EDEDED'),
               state: 'idle', static: true,
             });
           } catch (e) {
@@ -14679,7 +14684,7 @@ const __ENGINE = (function () {
           cfg = {};
           saveConfig(cfg);
           face.shape('sphere');
-          var base = dark ? '#E8E8E8' : '#0a0a0c';
+          var base = '#EDEDED';
           face.color(base);
           paintThumbs(base);
           paintSelection();
@@ -14694,7 +14699,7 @@ const __ENGINE = (function () {
             c.style.outline = on ? '2px solid #ff6700' : 'none';
             c.style.outlineOffset = on ? '-1px' : '0';
           });
-          var curColor = (cfg.color || (dark ? '#E8E8E8' : '#0a0a0c')).toLowerCase();
+          var curColor = (cfg.color || ('#EDEDED')).toLowerCase();
           swatches.forEach(function (s) {
             var on = s.dataset.color.toLowerCase() === curColor;
             s.style.outline = on ? '2px solid ' + fg : 'none';
@@ -14728,7 +14733,8 @@ const __ENGINE = (function () {
 
         var face = root.peepface.createFace(host, {
           shape: 'sphere',
-          color: dark ? '#E8E8E8' : '#0a0a0c',
+          color: '#EDEDED',      // 白球
+          spot: '#121212',       // 黑眼
           size: 96,
           state: 'idle',
         });
@@ -14780,7 +14786,7 @@ const __ENGINE = (function () {
         function onScheme() {
           var d = pageDark();
           host.querySelectorAll('svg path').forEach(function () {});
-          face.color(d ? '#E8E8E8' : '#0a0a0c');
+          face.color('#EDEDED');
         }
         if (mq && mq.addEventListener) mq.addEventListener('change', onScheme);
 
