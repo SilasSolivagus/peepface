@@ -4,6 +4,7 @@
 
 12 KB · 零依赖 · 纯 SVG · Apache-2.0
 
+[![npm](https://img.shields.io/npm/v/peepface?style=flat-square&color=222)](https://www.npmjs.com/package/peepface)
 [![Stars](https://img.shields.io/github/stars/SilasSolivagus/peepface?style=flat-square&color=222)](https://github.com/SilasSolivagus/peepface/stargazers)
 [![License](https://img.shields.io/github/license/SilasSolivagus/peepface?style=flat-square&color=222)](./LICENSE)
 [![Last commit](https://img.shields.io/github/last-commit/SilasSolivagus/peepface?style=flat-square&color=222)](https://github.com/SilasSolivagus/peepface/commits/main)
