@@ -1,3 +1,8 @@
 node_modules/
 .DS_Store
 *.log
+
+# 引擎代码不入库（版权原因）。本地用 extract-engine.mjs 生成。
+engine.mjs
+_runtime.mjs
+plugin-dsh/lib/client.js

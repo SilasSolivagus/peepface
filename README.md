@@ -8,7 +8,7 @@
   <a href="https://www.npmjs.com/package/peepface"><img src="https://img.shields.io/npm/v/peepface" alt="npm version"></a>
   <img src="https://img.shields.io/badge/license-Apache--2.0-FF6700" alt="license">
   <img src="https://img.shields.io/badge/22%20states-26%20shapes-FF6700" alt="22 states, 26 shapes">
-  <img src="https://img.shields.io/badge/size-26%20KB%20SVG-FF6700" alt="size">
+  <img src="https://img.shields.io/badge/install-21%20KB-FF6700" alt="install size">
 </p>
 
 <h3 align="center">
@@ -22,7 +22,10 @@
 
 ```bash
 npm i peepface
+npx peepface-extract "/Applications/Grok Bot.app"
 ```
+
+> **第二步是必须的。** 包里**不含引擎**（版权原因），提取脚本会从你本机安装的 Grok Bot 里把它拆出来。
 
 ```js
 import { createFace } from 'peepface';
@@ -209,28 +212,44 @@ ms([[82,86,44], [140,86,44], [82,144,44], [140,144,44]])   // 四圆融合 → �
 
 ## 引擎从哪来
 
-`engine.mjs`（512 KB）是从 **Grok Bot**（xAI 桌面客户端）的 bundle 里**原样移植**的动画引擎，未裁剪、未修改。
+引擎是 **Grok Bot**（xAI 桌面客户端）里的头像动画模块，我们从它的 bundle 里拆出来，**没有改过一行**。
 
 它负责：球面眼睛投影、贝塞尔缓动、弹簧物理、28 段关键帧、26 种形状几何、13 种装饰渲染器。
 
-**这不是我们写的。** 我们做的只是把它从 bundle 里拆出来，让它能独立跑。
+**这不是我们写的，也不在 npm 包里。**
 
-**怎么拆的 → [HOW.md](HOW.md)**（定位、AST 索引、依赖闭包、逐位验证，全部带命令和数字）
+### 为什么不带在包里
+
+因为它的版权不属于我们。分发别人的代码 = 侵权。
+
+所以包只有 **21 KB**（接口层 + 文档），引擎由你自己从本机 app 里提取：
+
+```bash
+npx peepface-extract "/Applications/Grok Bot.app"
+# → 生成 engine.mjs (373 KB) 到你本地
+```
+
+提取脚本做的事：解开 `app.asar` → 找到 `index.eager-common-*.js` → 换掉 import/export → 写出来。全流程在 [HOW.md](HOW.md)。
 
 ### 我们写的
 
 ```
-index.js      接口层：createFace / sync / defineShape / 形状与颜色的解析
-adapters/     DSH 适配器：DOM 观察 → facts
-PROTOCOL.md   状态协议
-build*.mjs    打包
+index.js            接口层：createFace / sync / defineShape / 形状与颜色的解析
+extract-engine.mjs  提取脚本
+adapters/           DSH 适配器：DOM 观察 → facts
+PROTOCOL.md         状态协议
+HOW.md              拆解方法
 ```
 
-**全部价值在这里**：把一套闭源的动画能力，变成一个任何人能接上的接口。
+**全部价值在这里**：把一套闭源的动画能力，变成一个任何人能接上的接口——而且不搬运代码。
 
 ### 法律状态
 
-**不适合商业分发。** 引擎版权属原厂，Apache-2.0 只覆盖接口层与文档。仓库公开用于学习研究。
+**这个仓库不含引擎代码。** `.gitignore` 里明确排除了 `engine.mjs` 和构建产物。
+
+- 我们分发的：接口层、协议、文档、提取脚本 — Apache-2.0
+- 不分发的：引擎本体 — 版权属原厂，你自己提取，自己承担使用风险
+- 表情包（`stickers/`）是用引擎渲染的衍生作品，**不建议商用**
 
 要做类似的东西，正确做法是**读 [PROTOCOL.md](PROTOCOL.md) 的接口设计，自己实现引擎**。
 

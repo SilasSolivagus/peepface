@@ -1,7 +1,7 @@
 {
   "name": "peepface",
-  "version": "2.0.1",
-  "description": "会表达状态的脸：26 种形状、任意颜色、22 个状态，一行 sync 接上任何 agent",
+  "version": "3.0.0",
+  "description": "会表达状态的脸：26 种形状、22 个状态，一行 sync 接上任何 agent（引擎需自备）",
   "type": "module",
   "main": "./index.js",
   "module": "./index.js",
@@ -18,16 +18,15 @@
   },
   "files": [
     "index.js",
-    "engine.mjs",
-    "runtime.mjs",
-    "_runtime.mjs",
+    "extract-engine.mjs",
     "peepface.d.ts",
     "PROTOCOL.md",
     "HOW.md",
     "README.md",
     "LICENSE",
-    "plugin-dsh/lib/client.js",
-    "plugin-dsh/package.json"
+    "plugin-dsh/lib/index.js",
+    "plugin-dsh/package.json",
+    "plugin-dsh/cordis.patch.yml"
   ],
   "keywords": [
     "agent",
@@ -50,8 +49,12 @@
     "url": "https://github.com/SilasSolivagus/peepface/issues"
   },
   "scripts": {
+    "extract": "node extract-engine.mjs",
     "build:plugin": "node build.mjs",
     "build:single": "node build-single.mjs",
     "export": "node export.mjs"
+  },
+  "bin": {
+    "peepface-extract": "./extract-engine.mjs"
   }
 }
