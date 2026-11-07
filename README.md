@@ -193,7 +193,7 @@ ms([[82,86,44], [140,86,44], [82,144,44], [140,144,44]])   // 四圆融合 → �
 
 换形状、换颜色、试穿 22 个状态、导出 PNG / SVG。
 
-不想开服务器？双击 [`custom-standalone.html`](custom-standalone.html) —— 一个文件，浏览器直接开。
+不想开服务器？先 `node build-single.mjs` 生成 `custom-standalone.html`（约 560 KB，内联引擎），双击就能开。
 
 ---
 
@@ -263,7 +263,7 @@ HOW.md              拆解方法
 | [HOW.md](HOW.md) | 引擎是怎么从一个 382 KB 的 chunk 里拆出来的 |
 | [IDEA-desktop.md](IDEA-desktop.md) | 设想：做成桌面应用 |
 | [`studio.html`](studio.html) | 换装间 |
-| [`custom-standalone.html`](custom-standalone.html) | 单文件版 |
+| `custom-standalone.html` | 单文件版（本地 `node build-single.mjs` 生成） |
 
 ---
 

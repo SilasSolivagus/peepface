@@ -6,3 +6,5 @@ node_modules/
 engine.mjs
 _runtime.mjs
 plugin-dsh/lib/client.js
+custom-standalone.html
+dist/
