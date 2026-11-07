@@ -1,6 +1,6 @@
 {
   "name": "peepface",
-  "version": "2.0.0",
+  "version": "2.0.1",
   "description": "会表达状态的脸：26 种形状、任意颜色、22 个状态，一行 sync 接上任何 agent",
   "type": "module",
   "main": "./index.js",
@@ -20,6 +20,7 @@
     "index.js",
     "engine.mjs",
     "runtime.mjs",
+    "_runtime.mjs",
     "peepface.d.ts",
     "PROTOCOL.md",
     "README.md",
