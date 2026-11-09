@@ -82,9 +82,32 @@
   button.act:hover{background:#23232c}
   button.act.primary{background:var(--fg);color:#0b0b0d;border-color:var(--fg)}
   code{font-size:11px;color:var(--dim)}
+  #pf-notice{
+    max-width:560px;margin:56px auto;padding:26px 30px;
+    background:#121216;border:1px solid #1f1f25;border-radius:16px;
+    font:14px/1.75 -apple-system,"PingFang SC",system-ui,sans-serif;
+    color:#ececef;text-align:left;
+  }
+  #pf-notice b{display:block;font-size:16px;margin-bottom:10px}
+  #pf-notice p{color:#71717a;font-size:13px;margin:10px 0}
+  #pf-notice pre{
+    background:#0e0e12;border:1px solid #1f1f25;border-radius:10px;
+    padding:12px 14px;font-size:12px;line-height:1.9;overflow-x:auto;color:#b0b0b8;
+  }
+  #pf-notice .dim{color:#4a4a52;font-size:12px}
 </style>
 </head>
 <body>
+<div id="pf-notice" hidden>
+  <b>这个页面需要引擎</b>
+  <p>引擎不随仓库分发（版权原因）。本地跑一遍提取脚本，再打开：</p>
+  <pre>npx peepface-extract "/Applications/Grok Bot.app"
+python3 -m http.server 8000
+# 开 http://127.0.0.1:8000/studio.html</pre>
+  <p class="dim">线上这个地址只有静态演示。</p>
+</div>
+
+
 <header>
   <h1>换装间</h1>
   <p class="sub">换形状、换颜色、试穿每一个状态</p>
@@ -133,148 +156,160 @@
 </main>
 
 <script type="module">
-import {
-  createFace, SHAPES, PALETTE, STATE_ALL, STATE_HELP, resolveColor,
-} from './index.js';
-
-const hero = createFace('#hero', { shape: 'sphere', state: 'idle', size: 220, color: '#EDEDED' });
-
-let currentShape = 'sphere';
-let currentColor = '#E8E8E8';
-let currentState = 'idle';
-
-/* ---------- 形状网格（静态缩略，不跑 rAF）---------- */
-const shapesBox = document.getElementById('shapes');
-const thumbs = new Map();
-
-for (const s of SHAPES) {
-  const cell = document.createElement('div');
-  cell.className = 'shape' + (s === currentShape ? ' on' : '');
-  cell.dataset.shape = s;
-  const inner = document.createElement('div');
-  cell.appendChild(inner);
-  shapesBox.appendChild(cell);
-
-  // 静态定格，省性能
   try {
-    createFace(inner, { shape: s, size: 68, color: currentColor, state: 'idle', static: true });
-  } catch (e) {
-    inner.textContent = '?';
-  }
+    const r = await fetch('./engine.mjs', { method: 'HEAD' });
+    if (!r.ok) throw new Error('engine.mjs 不在仓库里');
+    const { createFace, SHAPES, PALETTE, STATE_ALL, STATE_HELP, resolveColor, } = await import('./index.js');
 
-  cell.onclick = () => {
-    currentShape = s;
-    hero.shape(s);
-    document.querySelectorAll('.shape').forEach(n => n.classList.toggle('on', n.dataset.shape === s));
-    updateCode();
-  };
-}
+    const hero = createFace('#hero', { shape: 'sphere', state: 'idle', size: 220, color: '#EDEDED' });
 
-/* ---------- 颜色 ---------- */
-const colorsBox = document.getElementById('colors');
-for (const c of PALETTE) {
-  const sw = document.createElement('div');
-  sw.className = 'sw';
-  sw.style.background = c.value === '#000000' ? '#111' : c.value;
-  sw.title = `${c.label} ${c.value}`;
-  sw.onclick = () => setColor(c.value);
-  colorsBox.appendChild(sw);
-}
+    let currentShape = 'sphere';
+    let currentColor = '#E8E8E8';
+    let currentState = 'idle';
 
-const picker = document.getElementById('picker');
-const hexInput = document.getElementById('hex');
-picker.oninput = () => setColor(picker.value);
-hexInput.onchange = () => setColor(hexInput.value.trim());
+    /* ---------- 形状网格（静态缩略，不跑 rAF）---------- */
+    const shapesBox = document.getElementById('shapes');
+    const thumbs = new Map();
 
-function setColor(v) {
-  currentColor = resolveColor(v, currentColor);
-  hero.color(currentColor);
-  picker.value = currentColor.length === 7 ? currentColor : '#E8E8E8';
-  hexInput.value = currentColor;
-  // 更新缩略图颜色
-  document.querySelectorAll('.shape').forEach(cell => {
-    const inner = cell.firstChild;
-    inner.replaceChildren();
-    try {
-      createFace(inner, {
-        shape: cell.dataset.shape, size: 68,
-        color: currentColor, state: 'idle', static: true,
+    for (const s of SHAPES) {
+      const cell = document.createElement('div');
+      cell.className = 'shape' + (s === currentShape ? ' on' : '');
+      cell.dataset.shape = s;
+      const inner = document.createElement('div');
+      cell.appendChild(inner);
+      shapesBox.appendChild(cell);
+
+      // 静态定格，省性能
+      try {
+        createFace(inner, { shape: s, size: 68, color: currentColor, state: 'idle', static: true });
+      } catch (e) {
+        inner.textContent = '?';
+      }
+
+      cell.onclick = () => {
+        currentShape = s;
+        hero.shape(s);
+        document.querySelectorAll('.shape').forEach(n => n.classList.toggle('on', n.dataset.shape === s));
+        updateCode();
+      };
+    }
+
+    /* ---------- 颜色 ---------- */
+    const colorsBox = document.getElementById('colors');
+    for (const c of PALETTE) {
+      const sw = document.createElement('div');
+      sw.className = 'sw';
+      sw.style.background = c.value === '#000000' ? '#111' : c.value;
+      sw.title = `${c.label} ${c.value}`;
+      sw.onclick = () => setColor(c.value);
+      colorsBox.appendChild(sw);
+    }
+
+    const picker = document.getElementById('picker');
+    const hexInput = document.getElementById('hex');
+    picker.oninput = () => setColor(picker.value);
+    hexInput.onchange = () => setColor(hexInput.value.trim());
+
+    function setColor(v) {
+      currentColor = resolveColor(v, currentColor);
+      hero.color(currentColor);
+      picker.value = currentColor.length === 7 ? currentColor : '#E8E8E8';
+      hexInput.value = currentColor;
+      // 更新缩略图颜色
+      document.querySelectorAll('.shape').forEach(cell => {
+        const inner = cell.firstChild;
+        inner.replaceChildren();
+        try {
+          createFace(inner, {
+            shape: cell.dataset.shape, size: 68,
+            color: currentColor, state: 'idle', static: true,
+          });
+        } catch {}
       });
-    } catch {}
-  });
-  updateCode();
-}
+      updateCode();
+    }
 
-/* ---------- 状态 ---------- */
-const statesBox = document.getElementById('states');
-for (const s of STATE_ALL) {
-  const b = document.createElement('button');
-  b.className = 'st' + (s === currentState ? ' on' : '');
-  b.dataset.state = s;
-  b.innerHTML = `${s}<small>${STATE_HELP[s] || ''}</small>`;
-  b.onclick = () => {
-    currentState = s;
-    hero.state(s);
-    document.querySelectorAll('.st').forEach(n => n.classList.toggle('on', n.dataset.state === s));
-    document.getElementById('stageName').innerHTML = `<b>${s}</b> · ${STATE_HELP[s] || ''}`;
+    /* ---------- 状态 ---------- */
+    const statesBox = document.getElementById('states');
+    for (const s of STATE_ALL) {
+      const b = document.createElement('button');
+      b.className = 'st' + (s === currentState ? ' on' : '');
+      b.dataset.state = s;
+      b.innerHTML = `${s}<small>${STATE_HELP[s] || ''}</small>`;
+      b.onclick = () => {
+        currentState = s;
+        hero.state(s);
+        document.querySelectorAll('.st').forEach(n => n.classList.toggle('on', n.dataset.state === s));
+        document.getElementById('stageName').innerHTML = `<b>${s}</b> · ${STATE_HELP[s] || ''}`;
+        updateCode();
+      };
+      statesBox.appendChild(b);
+    }
+
+    /* ---------- 动作 ---------- */
+    document.getElementById('blink').onclick = () => hero.blink();
+    document.getElementById('poke').onclick = () => hero.poke('bounce');
+
+    /* ---------- 导出 ---------- */
+    function svgText() {
+      return document.querySelector('#hero svg')?.outerHTML || '';
+    }
+
+    document.getElementById('dlSvg').onclick = () => {
+      const blob = new Blob([svgText()], { type: 'image/svg+xml' });
+      download(URL.createObjectURL(blob), `peepface-${currentShape}-${currentState}.svg`);
+    };
+
+    document.getElementById('dlPng').onclick = () => {
+      const svg = svgText();
+      const img = new Image();
+      const url = 'data:image/svg+xml;base64,' + btoa(unescape(encodeURIComponent(svg)));
+      img.onload = () => {
+        const c = document.createElement('canvas');
+        c.width = c.height = 512;
+        const ctx = c.getContext('2d');
+        ctx.drawImage(img, 0, 0, 512, 512);
+        c.toBlob(b => download(URL.createObjectURL(b), `peepface-${currentShape}-${currentState}.png`));
+      };
+      img.src = url;
+    };
+
+    function download(url, name) {
+      const a = document.createElement('a');
+      a.href = url; a.download = name; a.click();
+      setTimeout(() => URL.revokeObjectURL(url), 3000);
+    }
+
+    /* ---------- 重置 ---------- */
+    document.getElementById('reset').onclick = () => {
+      currentShape = 'sphere';
+      currentState = 'idle';
+      hero.shape('sphere');
+      hero.state('idle');
+      setColor('#E8E8E8');
+      document.querySelectorAll('.shape').forEach(n => n.classList.toggle('on', n.dataset.shape === 'sphere'));
+      document.querySelectorAll('.st').forEach(n => n.classList.toggle('on', n.dataset.state === 'idle'));
+      updateCode();
+    };
+
+    /* ---------- 代码预览 ---------- */
+    function updateCode() {
+      document.getElementById('code').textContent =
+        `createFace(el, { shape: '${currentShape}', color: '${currentColor}', state: '${currentState}' })`;
+    }
     updateCode();
-  };
-  statesBox.appendChild(b);
-}
-
-/* ---------- 动作 ---------- */
-document.getElementById('blink').onclick = () => hero.blink();
-document.getElementById('poke').onclick = () => hero.poke('bounce');
-
-/* ---------- 导出 ---------- */
-function svgText() {
-  return document.querySelector('#hero svg')?.outerHTML || '';
-}
-
-document.getElementById('dlSvg').onclick = () => {
-  const blob = new Blob([svgText()], { type: 'image/svg+xml' });
-  download(URL.createObjectURL(blob), `peepface-${currentShape}-${currentState}.svg`);
-};
-
-document.getElementById('dlPng').onclick = () => {
-  const svg = svgText();
-  const img = new Image();
-  const url = 'data:image/svg+xml;base64,' + btoa(unescape(encodeURIComponent(svg)));
-  img.onload = () => {
-    const c = document.createElement('canvas');
-    c.width = c.height = 512;
-    const ctx = c.getContext('2d');
-    ctx.drawImage(img, 0, 0, 512, 512);
-    c.toBlob(b => download(URL.createObjectURL(b), `peepface-${currentShape}-${currentState}.png`));
-  };
-  img.src = url;
-};
-
-function download(url, name) {
-  const a = document.createElement('a');
-  a.href = url; a.download = name; a.click();
-  setTimeout(() => URL.revokeObjectURL(url), 3000);
-}
-
-/* ---------- 重置 ---------- */
-document.getElementById('reset').onclick = () => {
-  currentShape = 'sphere';
-  currentState = 'idle';
-  hero.shape('sphere');
-  hero.state('idle');
-  setColor('#E8E8E8');
-  document.querySelectorAll('.shape').forEach(n => n.classList.toggle('on', n.dataset.shape === 'sphere'));
-  document.querySelectorAll('.st').forEach(n => n.classList.toggle('on', n.dataset.state === 'idle'));
-  updateCode();
-};
-
-/* ---------- 代码预览 ---------- */
-function updateCode() {
-  document.getElementById('code').textContent =
-    `createFace(el, { shape: '${currentShape}', color: '${currentColor}', state: '${currentState}' })`;
-}
-updateCode();
-window.__studio = { hero };
+    window.__studio = { hero };
+  } catch (e) {
+    console.warn('[peepface]', e.message);
+    const _hhero = document.getElementById('hero'); if (_hhero) _hhero.style.display = 'none';
+    const _hstageName = document.getElementById('stageName'); if (_hstageName) _hstageName.style.display = 'none';
+    for (const sel of ['header', 'main', '.bar', '#log']) {
+      const el = document.querySelector(sel);
+      if (el) el.style.display = 'none';
+    }
+    const n = document.getElementById('pf-notice');
+    if (n) n.hidden = false;
+  }
 </script>
 </body>
 </html>

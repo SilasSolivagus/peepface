@@ -23,9 +23,32 @@
   button:hover{background:#1c1c24}
   button.on{background:var(--accent);border-color:var(--accent);color:#000}
   #log{font:12px/1.5 ui-monospace,Menlo,monospace;color:var(--dim);height:18px}
+  #pf-notice{
+    max-width:560px;margin:56px auto;padding:26px 30px;
+    background:#121216;border:1px solid #1f1f25;border-radius:16px;
+    font:14px/1.75 -apple-system,"PingFang SC",system-ui,sans-serif;
+    color:#ececef;text-align:left;
+  }
+  #pf-notice b{display:block;font-size:16px;margin-bottom:10px}
+  #pf-notice p{color:#71717a;font-size:13px;margin:10px 0}
+  #pf-notice pre{
+    background:#0e0e12;border:1px solid #1f1f25;border-radius:10px;
+    padding:12px 14px;font-size:12px;line-height:1.9;overflow-x:auto;color:#b0b0b8;
+  }
+  #pf-notice .dim{color:#4a4a52;font-size:12px}
 </style>
 </head>
 <body>
+<div id="pf-notice" hidden>
+  <b>这个页面需要引擎</b>
+  <p>引擎不随仓库分发（版权原因）。本地跑一遍提取脚本，再打开：</p>
+  <pre>npx peepface-extract "/Applications/Grok Bot.app"
+python3 -m http.server 8000
+# 开 http://127.0.0.1:8000/custom.html</pre>
+  <p class="dim">线上这个地址只有静态演示。</p>
+</div>
+
+
 
 <h1>自定义形状</h1>
 <p class="sub">三个用 SVG path 定义的脸，跑在同一个引擎上</p>
@@ -36,70 +59,85 @@
 <div id="log">点状态 / 或自动轮播</div>
 
 <script type="module">
-import { createFace, defineShape, STATE_ALL, STATE_HELP } from './index.js';
+  try {
+    const r = await fetch('./engine.mjs', { method: 'HEAD' });
+    if (!r.ok) throw new Error('engine.mjs 不在仓库里');
+    const { createFace, defineShape, STATE_ALL, STATE_HELP } = await import('./index.js');
 
-const CUSTOM = {
-  mySquircle: 'M 100 10 C 150 10 190 50 190 100 C 190 150 150 190 100 190 C 50 190 10 150 10 100 C 10 50 50 10 100 10 Z',
-  myDiamond:  'M 100 8 L 192 100 L 100 192 L 8 100 Z',
-  myArch:     'M 20 190 L 20 80 C 20 40 55 10 100 10 C 145 10 180 40 180 80 L 180 190 Z',
-};
+    const CUSTOM = {
+      mySquircle: 'M 100 10 C 150 10 190 50 190 100 C 190 150 150 190 100 190 C 50 190 10 150 10 100 C 10 50 50 10 100 10 Z',
+      myDiamond:  'M 100 8 L 192 100 L 100 192 L 8 100 Z',
+      myArch:     'M 20 190 L 20 80 C 20 40 55 10 100 10 C 145 10 180 40 180 80 L 180 190 Z',
+    };
 
-const row = document.getElementById('row');
-const faces = [];
+    const row = document.getElementById('row');
+    const faces = [];
 
-for (const [name, path] of Object.entries(CUSTOM)) {
-  defineShape(name, { path });
+    for (const [name, path] of Object.entries(CUSTOM)) {
+      defineShape(name, { path });
 
-  const cell = document.createElement('div');
-  cell.className = 'cell';
-  const box = document.createElement('div');
-  box.className = 'face';
-  const label = document.createElement('div');
-  label.className = 'name';
-  label.textContent = name;
-  const p = document.createElement('div');
-  p.className = 'path';
-  p.textContent = path.slice(0, 40) + '…';
+      const cell = document.createElement('div');
+      cell.className = 'cell';
+      const box = document.createElement('div');
+      box.className = 'face';
+      const label = document.createElement('div');
+      label.className = 'name';
+      label.textContent = name;
+      const p = document.createElement('div');
+      p.className = 'path';
+      p.textContent = path.slice(0, 40) + '…';
 
-  cell.appendChild(box);
-  cell.appendChild(label);
-  cell.appendChild(p);
-  row.appendChild(cell);
+      cell.appendChild(box);
+      cell.appendChild(label);
+      cell.appendChild(p);
+      row.appendChild(cell);
 
-  faces.push(createFace(box, { shape: name, size: 180, color: '#E8E8E8', state: 'idle' }));
-}
+      faces.push(createFace(box, { shape: name, size: 180, color: '#E8E8E8', state: 'idle' }));
+    }
 
-/* 状态按钮 */
-const bar = document.getElementById('bar');
-for (const s of STATE_ALL) {
-  const b = document.createElement('button');
-  b.textContent = s;
-  b.dataset.state = s;
-  b.onclick = () => apply(s);
-  bar.appendChild(b);
-}
+    /* 状态按钮 */
+    const bar = document.getElementById('bar');
+    for (const s of STATE_ALL) {
+      const b = document.createElement('button');
+      b.textContent = s;
+      b.dataset.state = s;
+      b.onclick = () => apply(s);
+      bar.appendChild(b);
+    }
 
-function apply(s) {
-  faces.forEach(f => f.state(s));
-  document.querySelectorAll('#bar button').forEach(n => n.classList.toggle('on', n.dataset.state === s));
-  document.getElementById('log').textContent = `${s} — ${STATE_HELP[s] || ''}`;
-  current = s;
-}
+    function apply(s) {
+      faces.forEach(f => f.state(s));
+      document.querySelectorAll('#bar button').forEach(n => n.classList.toggle('on', n.dataset.state === s));
+      document.getElementById('log').textContent = `${s} — ${STATE_HELP[s] || ''}`;
+      current = s;
+    }
 
-/* 自动轮播 */
-let current = 'idle';
-const LOOP = ['idle', 'thinking', 'working', 'searching', 'streaming', 'blocked', 'finished', 'failed', 'sleeping'];
-let idx = 0;
-const auto = setInterval(() => {
-  idx = (idx + 1) % LOOP.length;
-  apply(LOOP[idx]);
-}, 2600);
+    /* 自动轮播 */
+    let current = 'idle';
+    const LOOP = ['idle', 'thinking', 'working', 'searching', 'streaming', 'blocked', 'finished', 'failed', 'sleeping'];
+    let idx = 0;
+    const auto = setInterval(() => {
+      idx = (idx + 1) % LOOP.length;
+      apply(LOOP[idx]);
+    }, 2600);
 
-/* 点任意处暂停轮播 */
-document.addEventListener('click', () => clearInterval(auto), { once: true });
+    /* 点任意处暂停轮播 */
+    document.addEventListener('click', () => clearInterval(auto), { once: true });
 
-window.__faces = faces;
-window.__apply = apply;
+    window.__faces = faces;
+    window.__apply = apply;
+  } catch (e) {
+    console.warn('[peepface]', e.message);
+    const _hrow = document.getElementById('row'); if (_hrow) _hrow.style.display = 'none';
+    const _hbar = document.getElementById('bar'); if (_hbar) _hbar.style.display = 'none';
+    const _hlog = document.getElementById('log'); if (_hlog) _hlog.style.display = 'none';
+    for (const sel of ['header', 'main', '.bar', '#log']) {
+      const el = document.querySelector(sel);
+      if (el) el.style.display = 'none';
+    }
+    const n = document.getElementById('pf-notice');
+    if (n) n.hidden = false;
+  }
 </script>
 </body>
 </html>
