@@ -1,0 +1,11 @@
+# GitHub Pages：这些文件留在仓库里，但不发布到网站
+# （需要本地引擎才能跑的页面，线上只会显示「缺引擎」提示）
+exclude:
+  - studio.html
+  - custom.html
+  - legacy
+  - build.mjs
+  - build-single.mjs
+  - export.mjs
+  - extract-engine.mjs
+  - "*.tgz"
