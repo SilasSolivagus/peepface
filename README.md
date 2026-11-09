@@ -187,13 +187,20 @@ ms([[82,86,44], [140,86,44], [82,144,44], [140,144,44]])   // 四圆融合 → �
 
 ---
 
-## 换装间
+## 看看它长什么样
 
-**https://silassolivagus.github.io/peepface/studio.html**
+**https://silassolivagus.github.io/peepface/demo.html** —— 静态演示，不需要装任何东西。
 
-换形状、换颜色、试穿 22 个状态、导出 PNG / SVG。
+交互版（换装间）在本地跑：
 
-不想开服务器？先 `node build-single.mjs` 生成 `custom-standalone.html`（约 560 KB，内联引擎），双击就能开。
+```bash
+npm i peepface
+npx peepface-extract "/Applications/Grok Bot.app"
+python3 -m http.server 8000
+# 打开 http://127.0.0.1:8000/studio.html
+```
+
+能换 26 种形状、11 色板、试穿 22 个状态、导出 PNG / SVG。
 
 ---
 
@@ -262,7 +269,8 @@ HOW.md              拆解方法
 | [PROTOCOL.md](PROTOCOL.md) | 状态协议：facts 结构、求值顺序、工具映射 |
 | [HOW.md](HOW.md) | 引擎是怎么从一个 382 KB 的 chunk 里拆出来的 |
 | [IDEA-desktop.md](IDEA-desktop.md) | 设想：做成桌面应用 |
-| [`studio.html`](studio.html) | 换装间 |
+| [`demo.html`](demo.html) | 静态演示（线上可看） |
+| [`studio.html`](studio.html) | 换装间（需本地引擎） |
 | `custom-standalone.html` | 单文件版（本地 `node build-single.mjs` 生成） |
 
 ---

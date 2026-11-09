@@ -1,0 +1,106 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>peepface · 演示</title>
+<style>
+  :root{ --bg:#0B0B0D; --fg:#ECECEF; --dim:#71717A; --line:#1F1F25; --accent:#FF6700; }
+  *{box-sizing:border-box}
+  body{
+    margin:0;background:var(--bg);color:var(--fg);min-height:100vh;
+    font:14px/1.7 -apple-system,"PingFang SC",system-ui,sans-serif;
+  }
+  .wrap{max-width:900px;margin:0 auto;padding:64px 28px 100px}
+
+  h1{font-size:26px;font-weight:560;letter-spacing:-.02em;margin:0 0 10px}
+  .lead{color:var(--dim);font-size:15px;margin:0 0 44px;max-width:600px}
+
+  section{margin-bottom:56px}
+  h2{
+    font-size:12px;font-weight:600;letter-spacing:.1em;text-transform:uppercase;
+    color:var(--dim);margin:0 0 16px;
+  }
+  .shot{
+    border-radius:16px;overflow:hidden;background:#111114;
+    border:1px solid var(--line);
+  }
+  .shot img{display:block;width:100%}
+  .cap{color:var(--dim);font-size:12px;margin-top:10px}
+
+  .grid{display:grid;grid-template-columns:repeat(6,1fr);gap:8px}
+  @media(max-width:640px){ .grid{grid-template-columns:repeat(3,1fr)} }
+  .cell{border-radius:12px;overflow:hidden;background:#F4F4F2}
+  .cell img{display:block;width:100%}
+
+  .note{
+    margin-top:64px;padding:24px 26px;border-radius:16px;
+    background:#111114;border:1px solid var(--line);
+  }
+  .note b{display:block;font-size:15px;margin-bottom:10px}
+  .note p{color:var(--dim);font-size:13px;margin:8px 0}
+  pre{
+    background:#0A0A0C;border:1px solid var(--line);border-radius:10px;
+    padding:14px 16px;font-size:12px;line-height:1.9;overflow-x:auto;color:#B0B0B8;
+    margin:14px 0 0;
+  }
+  a{color:var(--fg)}
+  .live{color:var(--accent);text-decoration:none;border-bottom:1px solid rgba(255,103,0,.3)}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <h1>peepface</h1>
+  <p class="lead">
+    给 AI agent 装一张会表达状态的脸。下面是它在动的样子——<b>静态展示</b>，
+    因为引擎不随仓库分发，交互版本要在本地跑。
+  </p>
+
+  <section>
+    <h2>六个状态</h2>
+    <div class="shot"><img src="assets/banner.gif" alt="六个状态：在的 / 想想 / 来了来了 / 在做了 / 卡住了 / 搞定"></div>
+    <p class="cap">在的 · 想想 · 来了来了 · 在做了 · 卡住了 · 搞定</p>
+  </section>
+
+  <section>
+    <h2>自定义形状</h2>
+    <div class="shot"><img src="assets/custom.gif" alt="三个用 SVG path 定义的形状"></div>
+    <p class="cap">花 · 云 · 水滴 —— 三行路径字符串，引擎把它们变成会眨眼的脸</p>
+  </section>
+
+  <section>
+    <h2>十二个状态的表情包</h2>
+    <div class="grid" id="grid"></div>
+    <p class="cap">240 × 240，每个约 1.6 秒循环</p>
+  </section>
+
+  <div class="note">
+    <b>想玩交互版？</b>
+    <p>引擎（373 KB）是从 Grok Bot 里提取的，版权不归我们，所以不进仓库。</p>
+    <p>本地三步就能跑起来：</p>
+    <pre>npm i peepface
+npx peepface-extract "/Applications/Grok Bot.app"
+python3 -m http.server 8000
+# 打开 http://127.0.0.1:8000/studio.html</pre>
+    <p style="margin-top:16px">
+      换装间可以换 26 种形状、11 色板、试穿 22 个状态、导出 PNG/SVG。<br>
+      代码和文档在 <a href="https://github.com/SilasSolivagus/peepface">GitHub</a>。
+    </p>
+  </div>
+
+</div>
+
+<script>
+  const states = ['idle','listening','thinking','curious','streaming','working',
+                  'blocked','finished','failed','surprised','sleeping','waking'];
+  const grid = document.getElementById('grid');
+  for (const s of states) {
+    const d = document.createElement('div');
+    d.className = 'cell';
+    d.innerHTML = `<img src="stickers/${s}.gif" alt="${s}" loading="lazy">`;
+    grid.appendChild(d);
+  }
+</script>
+</body>
+</html>
